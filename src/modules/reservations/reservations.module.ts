@@ -1,7 +1,11 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ReservationsController } from './controllers/reservations.controller';
-import { ReservationsService } from './services/reservations.service';
+import { AddReservationService } from './services/add-reservation/add-reservation.service';
+import { LoadReservationsService } from './services/load-reservations/load-reservations.service';
+import { LoadReservationService } from './services/load-reservation/load-reservation.service';
+import { UpdateReservationService } from './services/update-reservation/update-reservation.service';
+import { RemoveReservationService } from './services/remove-reservation/remove-reservation.service';
 import { Reservation } from './entities/reservation.entity';
 import { ReservationSeat } from './entities/reservation-seat.entity';
 import { ReservationExpirationService } from './jobs/reservation-expiration.service';
@@ -13,6 +17,13 @@ import { EventsModule } from '../../shared/events/events.module';
     EventsModule,
   ],
   controllers: [ReservationsController],
-  providers: [ReservationsService, ReservationExpirationService],
+  providers: [
+    AddReservationService,
+    LoadReservationsService,
+    LoadReservationService,
+    UpdateReservationService,
+    RemoveReservationService,
+    ReservationExpirationService,
+  ],
 })
 export class ReservationsModule {}

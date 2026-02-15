@@ -5,18 +5,19 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { DataSource } from 'typeorm';
-import { Session } from '../../sessions/entities/session.entity';
+import { Session } from '../../../sessions/entities/session.entity';
 import {
   Reservation,
   ReservationStatus,
-} from '../../reservations/entities/reservation.entity';
-import { ReservationSeat } from '../../reservations/entities/reservation-seat.entity';
-import { Sale } from '../entities/sale.entity';
-import { SaleSeat } from '../entities/sale-seat.entity';
-import { ConfirmPaymentDto } from '../dtos/confirm-payment.dto';
+} from '../../../reservations/entities/reservation.entity';
+import { ReservationSeat } from '../../../reservations/entities/reservation-seat.entity';
+import { Sale } from '../../entities/sale.entity';
+import { SaleSeat } from '../../entities/sale-seat.entity';
+import { ConfirmPaymentDto } from '../../dtos/confirm-payment.dto';
+import { EventsService } from '../../../../shared/events/usecases/events.service';
 
 @Injectable()
-export class PaymentsService {
+export class ConfirmPaymentService {
   constructor(
     private readonly dataSource: DataSource,
     private readonly eventsService: EventsService,

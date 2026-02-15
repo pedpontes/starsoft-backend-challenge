@@ -12,20 +12,28 @@ import {
 import { AddUserDto } from '../dtos/add-user.dto';
 import { UpdateUserDto } from '../dtos/update-user.dto';
 import { UsersPaginationRequestDto } from '../dtos/users-pagination-request.dto';
-import { UsersService } from '../services/users.service';
-import { SalesService } from '../../payments/services/sales.service';
+import { AddUserService } from '../services/add-user/add-user.service';
+import { LoadUsersService } from '../services/load-users/load-users.service';
+import { LoadUserService } from '../services/load-user/load-user.service';
+import { UpdateUserService } from '../services/update-user/update-user.service';
+import { RemoveUserService } from '../services/remove-user/remove-user.service';
+import { LoadPurchaseHistoryService } from '../../payments/services/load-purchase-history/load-purchase-history.service';
 import { SalePaginationRequestDto } from '../../payments/dtos/sale-pagination-request.dto';
 
 @Controller('users')
 export class UsersController {
   constructor(
-    private readonly usersService: UsersService,
-    private readonly salesService: SalesService,
+    private readonly addUserService: AddUserService,
+    private readonly loadUsersService: LoadUsersService,
+    private readonly loadUserService: LoadUserService,
+    private readonly updateUserService: UpdateUserService,
+    private readonly removeUserService: RemoveUserService,
+    private readonly loadPurchaseHistoryService: LoadPurchaseHistoryService,
   ) {}
 
   @Post()
   async add(@Body() dto: AddUserDto) {
-    const user = await this.usersService.addUser(dto);
+    const user = await this.addUserService.addUser(dto);
     return {
       id: user.id,
       name: user.name,
@@ -36,12 +44,12 @@ export class UsersController {
 
   @Get()
   async loadAll(@Query() pagination: UsersPaginationRequestDto) {
-    return this.usersService.loadAll(pagination);
+    return this.loadUsersService.loadAll(pagination);
   }
 
   @Get(':id')
   async loadById(@Param('id', new ParseUUIDPipe()) id: string) {
-    return this.usersService.loadById(id);
+    return this.loadUserService.loadById(id);
   }
 
   @Patch(':id')
@@ -49,12 +57,12 @@ export class UsersController {
     @Param('id', new ParseUUIDPipe()) id: string,
     @Body() dto: UpdateUserDto,
   ) {
-    return this.usersService.updateUser(id, dto);
+    return this.updateUserService.updateUser(id, dto);
   }
 
   @Delete(':id')
   async remove(@Param('id', new ParseUUIDPipe()) id: string) {
-    await this.usersService.removeUser(id);
+    await this.removeUserService.removeUser(id);
     return { id };
   }
 
@@ -63,7 +71,10 @@ export class UsersController {
     @Param('id', new ParseUUIDPipe()) id: string,
     @Query() pagination: SalePaginationRequestDto,
   ) {
-    const sales = await this.salesService.loadPurchaseHistory(id, pagination);
+    const sales = await this.loadPurchaseHistoryService.loadPurchaseHistory(
+      id,
+      pagination,
+    );
     return { userId: id, sales };
   }
 }

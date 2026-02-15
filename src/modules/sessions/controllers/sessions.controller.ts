@@ -12,30 +12,42 @@ import {
 import { CreateSessionDto } from '../dtos/create-session.dto';
 import { UpdateSessionDto } from '../dtos/update-session.dto';
 import { SessionsPaginationRequestDto } from '../dtos/sessions-pagination-request.dto';
-import { SessionsService } from '../services/sessions.service';
+import { AddSessionService } from '../services/add-session/add-session.service';
+import { UpdateSessionService } from '../services/update-session/update-session.service';
+import { RemoveSessionService } from '../services/remove-session/remove-session.service';
+import { LoadSessionsService } from '../services/load-sessions/load-sessions.service';
+import { LoadSessionService } from '../services/load-session/load-session.service';
+import { LoadAvailabilityService } from '../services/load-availability/load-availability.service';
 
 @Controller('sessions')
 export class SessionsController {
-  constructor(private readonly sessionsService: SessionsService) {}
+  constructor(
+    private readonly addSessionService: AddSessionService,
+    private readonly loadSessionsService: LoadSessionsService,
+    private readonly loadSessionService: LoadSessionService,
+    private readonly loadAvailabilityService: LoadAvailabilityService,
+    private readonly updateSessionService: UpdateSessionService,
+    private readonly removeSessionService: RemoveSessionService,
+  ) {}
 
   @Post()
   async add(@Body() dto: CreateSessionDto) {
-    return this.sessionsService.addSession(dto);
+    return this.addSessionService.addSession(dto);
   }
 
   @Get()
   async loadAll(@Query() pagination: SessionsPaginationRequestDto) {
-    return this.sessionsService.loadSessions(pagination);
+    return this.loadSessionsService.loadSessions(pagination);
   }
 
   @Get(':id')
   async loadById(@Param('id', new ParseUUIDPipe()) id: string) {
-    return this.sessionsService.loadSession(id);
+    return this.loadSessionService.loadSession(id);
   }
 
   @Get(':id/availability')
   async availability(@Param('id', new ParseUUIDPipe()) id: string) {
-    return this.sessionsService.loadAvailability(id);
+    return this.loadAvailabilityService.loadAvailability(id);
   }
 
   @Patch(':id')
@@ -43,12 +55,12 @@ export class SessionsController {
     @Param('id', new ParseUUIDPipe()) id: string,
     @Body() dto: UpdateSessionDto,
   ) {
-    return this.sessionsService.updateSession(id, dto);
+    return this.updateSessionService.updateSession(id, dto);
   }
 
   @Delete(':id')
   async remove(@Param('id', new ParseUUIDPipe()) id: string) {
-    await this.sessionsService.removeSession(id);
+    await this.removeSessionService.removeSession(id);
     return { id };
   }
 }

@@ -2,11 +2,11 @@ import { Injectable } from '@nestjs/common';
 import type {
   SalePaginationRequest,
   SalePaginationResponse,
-} from '../types/sales.pagination';
-import { SaleTypeOrmRepository } from '../repositories/sale.repository';
+} from '../../types/sales.pagination';
+import { SaleTypeOrmRepository } from '../../repositories/sale.repository';
 
 @Injectable()
-export class SalesService {
+export class LoadPurchaseHistoryService {
   constructor(private readonly saleRepository: SaleTypeOrmRepository) {}
 
   async loadPurchaseHistory(
