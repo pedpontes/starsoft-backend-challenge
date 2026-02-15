@@ -2,25 +2,19 @@ import { Injectable } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { User } from '../entities/user.entity';
 import { AddUserDto } from '../dtos/add-user.dto';
+import { UserRepository } from './contracts/user.repository';
 import {
   UsersPaginationOrderBy,
   UsersPaginationRequest,
   UsersPaginationResponse,
 } from '../types/users.pagination';
 
-export interface UserRepository {
-  add(addUser: AddUserDto): Promise<User>;
-  loadById(id: User['id']): Promise<User | null>;
-  loadAll(request: UsersPaginationRequest): Promise<UsersPaginationResponse>;
-  update(id: User['id'], updates: Partial<AddUserDto>): Promise<User | null>;
-  remove(id: User['id']): Promise<boolean>;
-}
-
 @Injectable()
-export class UserTypeOrmRepository implements UserRepository {
+export class UserTypeOrmRepository extends UserRepository {
   #user: Repository<User>;
 
   constructor(private readonly dataSource: DataSource) {
+    super();
     this.#user = this.dataSource.getRepository(User);
   }
 

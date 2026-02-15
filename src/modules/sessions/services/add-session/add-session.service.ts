@@ -1,11 +1,11 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { CreateSessionDto } from '../../dtos/create-session.dto';
-import { SessionTypeOrmRepository } from '../../repositories/session.repository';
+import { SessionRepository } from '../../repositories/contracts/session.repository';
 
 @Injectable()
 export class AddSessionService {
   constructor(
-    private readonly sessionRepository: SessionTypeOrmRepository,
+    private readonly sessionRepository: SessionRepository,
   ) {}
 
   async addSession(dto: CreateSessionDto) {

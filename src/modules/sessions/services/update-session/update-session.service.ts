@@ -5,14 +5,14 @@ import {
 } from '@nestjs/common';
 import { UpdateSessionDto } from '../../dtos/update-session.dto';
 import {
-  SessionTypeOrmRepository,
+  SessionRepository,
   SessionUpdateInput,
-} from '../../repositories/session.repository';
+} from '../../repositories/contracts/session.repository';
 
 @Injectable()
 export class UpdateSessionService {
   constructor(
-    private readonly sessionRepository: SessionTypeOrmRepository,
+    private readonly sessionRepository: SessionRepository,
   ) {}
 
   async updateSession(sessionId: string, dto: UpdateSessionDto) {

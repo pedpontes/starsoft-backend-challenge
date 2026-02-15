@@ -1,9 +1,9 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { UserTypeOrmRepository } from '../../repositories/user.repository';
+import { UserRepository } from '../../repositories/contracts/user.repository';
 
 @Injectable()
 export class LoadUserService {
-  constructor(private readonly userRepository: UserTypeOrmRepository) {}
+  constructor(private readonly userRepository: UserRepository) {}
 
   async loadById(userId: string) {
     const user = await this.userRepository.loadById(userId);

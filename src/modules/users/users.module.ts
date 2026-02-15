@@ -7,6 +7,7 @@ import { LoadUserService } from './services/load-user/load-user.service';
 import { UpdateUserService } from './services/update-user/update-user.service';
 import { RemoveUserService } from './services/remove-user/remove-user.service';
 import { User } from './entities/user.entity';
+import { UserRepository } from './repositories/contracts/user.repository';
 import { UserTypeOrmRepository } from './repositories/user.repository';
 import { PaymentsModule } from '../payments/payments.module';
 
@@ -19,7 +20,10 @@ import { PaymentsModule } from '../payments/payments.module';
     LoadUserService,
     UpdateUserService,
     RemoveUserService,
-    UserTypeOrmRepository,
+    {
+      provide: UserRepository,
+      useClass: UserTypeOrmRepository,
+    },
   ],
 })
 export class UsersModule {}

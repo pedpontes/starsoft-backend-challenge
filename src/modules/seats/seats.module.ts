@@ -7,6 +7,7 @@ import { LoadSeatsService } from './services/load-seats/load-seats.service';
 import { UpdateSeatService } from './services/update-seat/update-seat.service';
 import { RemoveSeatService } from './services/remove-seat/remove-seat.service';
 import { Seat } from './entities/seat.entity';
+import { SeatRepository } from './repositories/contracts/seat.repository';
 import { SeatTypeOrmRepository } from './repositories/seat.repository';
 
 @Module({
@@ -18,7 +19,10 @@ import { SeatTypeOrmRepository } from './repositories/seat.repository';
     LoadSeatsService,
     UpdateSeatService,
     RemoveSeatService,
-    SeatTypeOrmRepository,
+    {
+      provide: SeatRepository,
+      useClass: SeatTypeOrmRepository,
+    },
   ],
 })
 export class SeatsModule {}

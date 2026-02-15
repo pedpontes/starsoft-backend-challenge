@@ -1,9 +1,9 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { SeatTypeOrmRepository } from '../../repositories/seat.repository';
+import { SeatRepository } from '../../repositories/contracts/seat.repository';
 
 @Injectable()
 export class LoadSeatService {
-  constructor(private readonly seatRepository: SeatTypeOrmRepository) {}
+  constructor(private readonly seatRepository: SeatRepository) {}
 
   async loadSeat(id: string) {
     const seat = await this.seatRepository.loadById(id);

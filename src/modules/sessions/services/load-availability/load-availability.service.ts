@@ -1,12 +1,12 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { SessionTypeOrmRepository } from '../../repositories/session.repository';
+import { SessionRepository } from '../../repositories/contracts/session.repository';
 
 @Injectable()
 export class LoadAvailabilityService {
   private soldSet: Set<string>;
   private reservedSet: Set<string>;
 
-  constructor(private readonly sessionRepository: SessionTypeOrmRepository) {}
+  constructor(private readonly sessionRepository: SessionRepository) {}
 
   async loadAvailability(sessionId: string) {
     const session = await this.sessionRepository.loadById(sessionId);

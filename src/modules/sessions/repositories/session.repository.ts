@@ -7,49 +7,24 @@ import { SaleSeat } from '../../payments/entities/sale-seat.entity';
 import { Session } from '../entities/session.entity';
 import { CreateSessionDto } from '../dtos/create-session.dto';
 import {
+  SessionRepository,
+  SessionUpdateInput,
+} from './contracts/session.repository';
+import {
   SessionsPaginationOrderBy,
   SessionsPaginationRequest,
   SessionsPaginationResponse,
 } from '../types/sessions.pagination';
 
-export type SessionUpdateInput = {
-  movieTitle?: string;
-  startsAt?: Date;
-  room?: string;
-  price?: string;
-};
-
-export interface SessionRepository {
-  add(
-    addSession: CreateSessionDto,
-    seatLabels: string[],
-  ): Promise<{ sessionId: string; seatsCount: number }>;
-  loadAll(request: SessionsPaginationRequest): Promise<SessionsPaginationResponse>;
-  loadById(id: Session['id']): Promise<Session | null>;
-  loadSeatsBySessionId(sessionId: Session['id']): Promise<Seat[]>;
-  loadReservedSeatIds(
-    sessionId: Session['id'],
-    seatIds: Seat['id'][],
-  ): Promise<Seat['id'][]>;
-  loadSoldSeatIds(
-    sessionId: Session['id'],
-    seatIds: Seat['id'][],
-  ): Promise<Seat['id'][]>;
-  update(
-    id: Session['id'],
-    updates: SessionUpdateInput,
-  ): Promise<Session | null>;
-  remove(id: Session['id']): Promise<boolean>;
-}
-
 @Injectable()
-export class SessionTypeOrmRepository implements SessionRepository {
+export class SessionTypeOrmRepository extends SessionRepository {
   #session: Repository<Session>;
   #seat: Repository<Seat>;
   #reservationSeat: Repository<ReservationSeat>;
   #saleSeat: Repository<SaleSeat>;
 
   constructor(private readonly dataSource: DataSource) {
+    super();
     this.#session = this.dataSource.getRepository(Session);
     this.#seat = this.dataSource.getRepository(Seat);
     this.#reservationSeat = this.dataSource.getRepository(ReservationSeat);

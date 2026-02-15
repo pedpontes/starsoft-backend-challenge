@@ -3,11 +3,11 @@ import type {
   SalePaginationRequest,
   SalePaginationResponse,
 } from '../../types/sales.pagination';
-import { SaleTypeOrmRepository } from '../../repositories/sale.repository';
+import { SaleRepository } from '../../repositories/contracts/sale.repository';
 
 @Injectable()
 export class LoadPurchaseHistoryService {
-  constructor(private readonly saleRepository: SaleTypeOrmRepository) {}
+  constructor(private readonly saleRepository: SaleRepository) {}
 
   async loadPurchaseHistory(
     userId: string,

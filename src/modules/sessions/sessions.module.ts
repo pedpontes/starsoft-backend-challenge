@@ -8,6 +8,7 @@ import { LoadSessionsService } from './services/load-sessions/load-sessions.serv
 import { LoadSessionService } from './services/load-session/load-session.service';
 import { LoadAvailabilityService } from './services/load-availability/load-availability.service';
 import { Session } from './entities/session.entity';
+import { SessionRepository } from './repositories/contracts/session.repository';
 import { SessionTypeOrmRepository } from './repositories/session.repository';
 
 @Module({
@@ -20,7 +21,11 @@ import { SessionTypeOrmRepository } from './repositories/session.repository';
     LoadSessionsService,
     LoadSessionService,
     LoadAvailabilityService,
-    SessionTypeOrmRepository,
+    {
+      provide: SessionRepository,
+      useClass: SessionTypeOrmRepository,
+    },
   ],
+  exports: [SessionRepository],
 })
 export class SessionsModule {}

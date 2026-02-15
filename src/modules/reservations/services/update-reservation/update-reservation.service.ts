@@ -1,32 +1,41 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { DataSource } from 'typeorm';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { UpdateReservationDto } from '../../dtos/update-reservation.dto';
-import { Reservation } from '../../entities/reservation.entity';
+import {
+  ReservationRepository,
+  ReservationUpdateInput,
+} from '../../repositories/contracts/reservation.repository';
 
 @Injectable()
 export class UpdateReservationService {
-  constructor(private readonly dataSource: DataSource) {}
+  constructor(
+    private readonly reservationRepository: ReservationRepository,
+  ) {}
 
   async updateReservation(reservationId: string, dto: UpdateReservationDto) {
     if (!dto.status && !dto.expiresAt) {
       throw new BadRequestException('No fields to update.');
     }
 
-    const reservationRepo = this.dataSource.getRepository(Reservation);
-    const reservation = await reservationRepo.findOne({
-      where: { id: reservationId },
-    });
+    const updates: ReservationUpdateInput = {};
+    if (dto.status) {
+      updates.status = dto.status;
+    }
+    if (dto.expiresAt) {
+      updates.expiresAt = new Date(dto.expiresAt);
+    }
+
+    const reservation = await this.reservationRepository.update(
+      reservationId,
+      updates,
+    );
     if (!reservation) {
       throw new NotFoundException('Reservation not found.');
     }
 
-    if (dto.status) {
-      reservation.status = dto.status;
-    }
-    if (dto.expiresAt) {
-      reservation.expiresAt = new Date(dto.expiresAt);
-    }
-
-    return reservationRepo.save(reservation);
+    return reservation;
   }
 }

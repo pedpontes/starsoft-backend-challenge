@@ -1,25 +1,19 @@
 import { Injectable } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { Sale } from '../entities/sale.entity';
+import { SaleRepository } from './contracts/sale.repository';
 import {
   SalePaginationOrderBy,
   SalePaginationRequest,
   SalePaginationResponse,
 } from '../types/sales.pagination';
 
-export interface SaleRepository {
-  loadById(id: Sale['id']): Promise<Sale | null>;
-  loadPurchaseHistory(
-    userId: Sale['userId'],
-    request: SalePaginationRequest,
-  ): Promise<SalePaginationResponse>;
-}
-
 @Injectable()
-export class SaleTypeOrmRepository implements SaleRepository {
+export class SaleTypeOrmRepository extends SaleRepository {
   #sale: Repository<Sale>;
 
   constructor(private readonly dataSource: DataSource) {
+    super();
     this.#sale = this.dataSource.getRepository(Sale);
   }
 

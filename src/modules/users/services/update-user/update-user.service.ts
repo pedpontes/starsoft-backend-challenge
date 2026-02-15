@@ -4,11 +4,11 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { UpdateUserDto } from '../../dtos/update-user.dto';
-import { UserTypeOrmRepository } from '../../repositories/user.repository';
+import { UserRepository } from '../../repositories/contracts/user.repository';
 
 @Injectable()
 export class UpdateUserService {
-  constructor(private readonly userRepository: UserTypeOrmRepository) {}
+  constructor(private readonly userRepository: UserRepository) {}
 
   async updateUser(userId: string, dto: UpdateUserDto) {
     if (!dto.name && !dto.email) {

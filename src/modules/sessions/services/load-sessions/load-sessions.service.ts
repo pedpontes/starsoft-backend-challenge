@@ -3,12 +3,12 @@ import type {
   SessionsPaginationRequest,
   SessionsPaginationResponse,
 } from '../../types/sessions.pagination';
-import { SessionTypeOrmRepository } from '../../repositories/session.repository';
+import { SessionRepository } from '../../repositories/contracts/session.repository';
 
 @Injectable()
 export class LoadSessionsService {
   constructor(
-    private readonly sessionRepository: SessionTypeOrmRepository,
+    private readonly sessionRepository: SessionRepository,
   ) {}
 
   async loadSessions(

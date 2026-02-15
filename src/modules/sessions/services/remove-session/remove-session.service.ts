@@ -1,10 +1,10 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { SessionTypeOrmRepository } from '../../repositories/session.repository';
+import { SessionRepository } from '../../repositories/contracts/session.repository';
 
 @Injectable()
 export class RemoveSessionService {
   constructor(
-    private readonly sessionRepository: SessionTypeOrmRepository,
+    private readonly sessionRepository: SessionRepository,
   ) {}
 
   async removeSession(sessionId: string) {

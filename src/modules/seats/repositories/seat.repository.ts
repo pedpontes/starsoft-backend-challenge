@@ -3,26 +3,20 @@ import { DataSource, Repository } from 'typeorm';
 import { Seat } from '../entities/seat.entity';
 import { Session } from '../../sessions/entities/session.entity';
 import { AddSeatDto } from '../dtos/add-seat.dto';
+import { SeatRepository } from './contracts/seat.repository';
 import {
   SeatsPaginationOrderBy,
   SeatsPaginationRequest,
   SeatsPaginationResponse,
 } from '../types/seats.pagination';
 
-export interface SeatRepository {
-  add(addSeat: AddSeatDto): Promise<Seat | null>;
-  loadById(id: Seat['id']): Promise<Seat | null>;
-  loadAll(request: SeatsPaginationRequest): Promise<SeatsPaginationResponse>;
-  update(id: Seat['id'], updates: Partial<AddSeatDto>): Promise<Seat | null>;
-  remove(id: Seat['id']): Promise<boolean>;
-}
-
 @Injectable()
-export class SeatTypeOrmRepository implements SeatRepository {
+export class SeatTypeOrmRepository extends SeatRepository {
   #seat: Repository<Seat>;
   #session: Repository<Session>;
 
   constructor(private readonly dataSource: DataSource) {
+    super();
     this.#seat = this.dataSource.getRepository(Seat);
     this.#session = this.dataSource.getRepository(Session);
   }

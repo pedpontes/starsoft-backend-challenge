@@ -1,9 +1,9 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { UserTypeOrmRepository } from '../../repositories/user.repository';
+import { UserRepository } from '../../repositories/contracts/user.repository';
 
 @Injectable()
 export class RemoveUserService {
-  constructor(private readonly userRepository: UserTypeOrmRepository) {}
+  constructor(private readonly userRepository: UserRepository) {}
 
   async removeUser(userId: string) {
     const removed = await this.userRepository.remove(userId);

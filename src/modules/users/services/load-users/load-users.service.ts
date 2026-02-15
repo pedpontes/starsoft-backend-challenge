@@ -3,11 +3,11 @@ import type {
   UsersPaginationRequest,
   UsersPaginationResponse,
 } from '../../types/users.pagination';
-import { UserTypeOrmRepository } from '../../repositories/user.repository';
+import { UserRepository } from '../../repositories/contracts/user.repository';
 
 @Injectable()
 export class LoadUsersService {
-  constructor(private readonly userRepository: UserTypeOrmRepository) {}
+  constructor(private readonly userRepository: UserRepository) {}
 
   async loadAll(
     request: UsersPaginationRequest,

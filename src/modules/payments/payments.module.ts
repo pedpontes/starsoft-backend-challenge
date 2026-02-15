@@ -6,6 +6,7 @@ import { Sale } from './entities/sale.entity';
 import { SaleSeat } from './entities/sale-seat.entity';
 import { EventsModule } from '../../shared/events/events.module';
 import { LoadPurchaseHistoryService } from './services/load-purchase-history/load-purchase-history.service';
+import { SaleRepository } from './repositories/contracts/sale.repository';
 import { SaleTypeOrmRepository } from './repositories/sale.repository';
 
 @Module({
@@ -14,7 +15,10 @@ import { SaleTypeOrmRepository } from './repositories/sale.repository';
   providers: [
     ConfirmPaymentService,
     LoadPurchaseHistoryService,
-    SaleTypeOrmRepository,
+    {
+      provide: SaleRepository,
+      useClass: SaleTypeOrmRepository,
+    },
   ],
   exports: [LoadPurchaseHistoryService],
 })

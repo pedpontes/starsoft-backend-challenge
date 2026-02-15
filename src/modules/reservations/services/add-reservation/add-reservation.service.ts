@@ -3,18 +3,16 @@ import {
   ConflictException,
   Injectable,
 } from '@nestjs/common';
-import { DataSource } from 'typeorm';
-import { Seat } from '../../../seats/entities/seat.entity';
-import { ReservationSeat } from '../../entities/reservation-seat.entity';
-import { Reservation, ReservationStatus } from '../../entities/reservation.entity';
-import { SaleSeat } from '../../../payments/entities/sale-seat.entity';
 import { CreateReservationDto } from '../../dtos/create-reservation.dto';
 import { EventsService } from '../../../../shared/events/usecases/events.service';
+import { ReservationRepository } from '../../repositories/contracts/reservation.repository';
+import { SessionRepository } from '../../../sessions/repositories/contracts/session.repository';
 
 @Injectable()
 export class AddReservationService {
   constructor(
-    private readonly dataSource: DataSource,
+    private readonly reservationRepository: ReservationRepository,
+    private readonly sessionRepository: SessionRepository,
     private readonly eventsService: EventsService,
   ) {}
 
@@ -26,73 +24,38 @@ export class AddReservationService {
 
     const expiresAt = new Date(Date.now() + 30_000);
 
-    const reservation = await this.dataSource.transaction(async (manager) => {
-      const seatRepo = manager.getRepository(Seat);
-      const reservationRepo = manager.getRepository(Reservation);
-      const reservationSeatRepo = manager.getRepository(ReservationSeat);
-      const saleSeatRepo = manager.getRepository(SaleSeat);
-
-      const seats = await seatRepo
-        .createQueryBuilder('seat')
-        .setLock('pessimistic_write')
-        .where('seat.id IN (:...seatIds)', { seatIds })
-        .andWhere('seat.sessionId = :sessionId', { sessionId: dto.sessionId })
-        .orderBy('seat.id', 'ASC')
-        .getMany();
-
-      if (seats.length !== seatIds.length) {
-        throw new BadRequestException(
-          'Some seats were not found for this session.',
-        );
-      }
-
-      const soldCount = await saleSeatRepo
-        .createQueryBuilder('saleSeat')
-        .innerJoin('saleSeat.sale', 'sale')
-        .where('saleSeat.seatId IN (:...seatIds)', { seatIds })
-        .andWhere('sale.sessionId = :sessionId', { sessionId: dto.sessionId })
-        .getCount();
-
-      if (soldCount > 0) {
-        throw new ConflictException('Some seats are already sold.');
-      }
-
-      const activeReservations = await reservationSeatRepo
-        .createQueryBuilder('reservationSeat')
-        .innerJoin('reservationSeat.reservation', 'reservation')
-        .where('reservationSeat.seatId IN (:...seatIds)', { seatIds })
-        .andWhere('reservation.sessionId = :sessionId', {
-          sessionId: dto.sessionId,
-        })
-        .andWhere('reservation.status = :status', {
-          status: ReservationStatus.RESERVED,
-        })
-        .andWhere('reservation.expiresAt > NOW()')
-        .getCount();
-
-      if (activeReservations > 0) {
-        throw new ConflictException('Some seats are already reserved.');
-      }
-
-      const reservation = reservationRepo.create({
-        sessionId: dto.sessionId,
-        userId: dto.userId,
-        status: ReservationStatus.RESERVED,
-        expiresAt,
-      });
-
-      await reservationRepo.save(reservation);
-
-      const reservationSeats = seatIds.map((seatId) =>
-        reservationSeatRepo.create({
-          reservationId: reservation.id,
-          seatId,
-        }),
+    const seats = await this.sessionRepository.loadSeatsBySessionId(
+      dto.sessionId,
+    );
+    const seatIdSet = new Set(seats.map((seat) => seat.id));
+    const missingSeats = seatIds.filter((seatId) => !seatIdSet.has(seatId));
+    if (missingSeats.length > 0) {
+      throw new BadRequestException(
+        'Some seats were not found for this session.',
       );
+    }
 
-      await reservationSeatRepo.save(reservationSeats);
+    const soldSeatIds = await this.sessionRepository.loadSoldSeatIds(
+      dto.sessionId,
+      seatIds,
+    );
+    if (soldSeatIds.length > 0) {
+      throw new ConflictException('Some seats are already sold.');
+    }
 
-      return reservation;
+    const reservedSeatIds = await this.sessionRepository.loadReservedSeatIds(
+      dto.sessionId,
+      seatIds,
+    );
+    if (reservedSeatIds.length > 0) {
+      throw new ConflictException('Some seats are already reserved.');
+    }
+
+    const reservation = await this.reservationRepository.add({
+      sessionId: dto.sessionId,
+      userId: dto.userId,
+      seatIds,
+      expiresAt,
     });
 
     await this.eventsService.publish('reservation.created', {

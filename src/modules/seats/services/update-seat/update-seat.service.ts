@@ -4,11 +4,11 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { UpdateSeatDto } from '../../dtos/update-seat.dto';
-import { SeatTypeOrmRepository } from '../../repositories/seat.repository';
+import { SeatRepository } from '../../repositories/contracts/seat.repository';
 
 @Injectable()
 export class UpdateSeatService {
-  constructor(private readonly seatRepository: SeatTypeOrmRepository) {}
+  constructor(private readonly seatRepository: SeatRepository) {}
 
   async updateSeat(id: string, dto: UpdateSeatDto) {
     if (!dto.label) {
