@@ -8,9 +8,16 @@ import { EventsModule } from '../../shared/events/events.module';
 import { LoadPurchaseHistoryService } from './services/load-purchase-history/load-purchase-history.service';
 import { SaleRepository } from './repositories/contracts/sale.repository';
 import { SaleTypeOrmRepository } from './repositories/sale.repository';
+import { PaymentRepository } from './repositories/contracts/payment.repository';
+import { PaymentTypeOrmRepository } from './repositories/payment.repository';
+import { SessionsModule } from '../sessions/sessions.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Sale, SaleSeat]), EventsModule],
+  imports: [
+    TypeOrmModule.forFeature([Sale, SaleSeat]),
+    EventsModule,
+    SessionsModule,
+  ],
   controllers: [PaymentsController],
   providers: [
     ConfirmPaymentService,
@@ -18,6 +25,10 @@ import { SaleTypeOrmRepository } from './repositories/sale.repository';
     {
       provide: SaleRepository,
       useClass: SaleTypeOrmRepository,
+    },
+    {
+      provide: PaymentRepository,
+      useClass: PaymentTypeOrmRepository,
     },
   ],
 })

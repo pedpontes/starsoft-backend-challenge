@@ -11,14 +11,11 @@ import {
 
 @Injectable()
 export class UpdateReservationService {
-  constructor(
-    private readonly reservationRepository: ReservationRepository,
-  ) {}
+  constructor(private readonly reservationRepository: ReservationRepository) {}
 
   async updateReservation(reservationId: string, dto: UpdateReservationDto) {
-    if (!dto.status && !dto.expiresAt) {
+    if (!dto.status && !dto.expiresAt)
       throw new BadRequestException('No fields to update.');
-    }
 
     const updates: UpdateReservationInput = {};
     if (dto.status) {
@@ -32,9 +29,7 @@ export class UpdateReservationService {
       reservationId,
       updates,
     );
-    if (!reservation) {
-      throw new NotFoundException('Reservation not found.');
-    }
+    if (!reservation) throw new NotFoundException('Reservation not found.');
 
     return reservation;
   }

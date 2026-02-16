@@ -7,6 +7,10 @@ import { CreateReservationDto } from '../../dtos/create-reservation.dto';
 import { ReservationRepository } from '../../repositories/contracts/reservation.repository';
 import { SessionRepository } from '../../../sessions/repositories/contracts/session.repository';
 import { Seat } from 'src/modules/seats/entities/seat.entity';
+import { EventsService } from 'src/shared/events/usecases/events.service';
+import { EventName } from 'src/shared/events/types/event-names';
+import { SeatAvailabilityCacheService } from '../../../sessions/services/seat-availability-cache/seat-availability-cache.service';
+import { SeatStatus } from '../../../sessions/types/seat-status';
 
 @Injectable()
 export class AddReservationService {
@@ -15,6 +19,8 @@ export class AddReservationService {
   constructor(
     private readonly reservationRepository: ReservationRepository,
     private readonly sessionRepository: SessionRepository,
+    private readonly eventsService: EventsService,
+    private readonly seatAvailabilityCacheService: SeatAvailabilityCacheService,
   ) {}
 
   async addReservation(dto: CreateReservationDto) {
@@ -36,6 +42,18 @@ export class AddReservationService {
       seatIds: uniqueSeatIds,
       expiresAt,
     });
+
+    const ttlSeconds = Math.max(
+      1,
+      Math.ceil((expiresAt.getTime() - Date.now()) / 1000),
+    );
+    await this.safeUpdateCachedSeats(
+      dto.sessionId,
+      uniqueSeatIds,
+      SeatStatus.RESERVED,
+      ttlSeconds,
+    );
+    await this.eventsService.publish(EventName.ReservationCreated, reservation);
 
     return reservation;
   }
@@ -60,5 +78,23 @@ export class AddReservationService {
       throw new ConflictException('Some seats are already sold.');
     if (reservedSeatIds.length > 0)
       throw new ConflictException('Some seats are already reserved.');
+  }
+
+  private async safeUpdateCachedSeats(
+    sessionId: string,
+    seatIds: string[],
+    status: SeatStatus,
+    ttlSeconds: number,
+  ) {
+    try {
+      await this.seatAvailabilityCacheService.setSeatStatuses(
+        sessionId,
+        seatIds,
+        status,
+        ttlSeconds,
+      );
+    } catch {
+      // Best-effort cache update.
+    }
   }
 }
