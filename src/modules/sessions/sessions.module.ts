@@ -10,9 +10,11 @@ import { LoadAvailabilityService } from './services/load-availability/load-avail
 import { Session } from './entities/session.entity';
 import { SessionRepository } from './repositories/contracts/session.repository';
 import { SessionTypeOrmRepository } from './repositories/session.repository';
+import { CacheModule } from '../../infra/cache/cache.module';
+import { SeatAvailabilityCacheService } from './services/seat-availability-cache/seat-availability-cache.service';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Session])],
+  imports: [TypeOrmModule.forFeature([Session]), CacheModule],
   controllers: [SessionsController],
   providers: [
     AddSessionService,
@@ -21,11 +23,12 @@ import { SessionTypeOrmRepository } from './repositories/session.repository';
     LoadSessionsService,
     LoadSessionService,
     LoadAvailabilityService,
+    SeatAvailabilityCacheService,
     {
       provide: SessionRepository,
       useClass: SessionTypeOrmRepository,
     },
   ],
-  exports: [SessionRepository],
+  exports: [SessionRepository, SeatAvailabilityCacheService],
 })
 export class SessionsModule {}

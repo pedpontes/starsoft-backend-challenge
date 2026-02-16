@@ -18,22 +18,22 @@ export class AddReservationService {
   ) {}
 
   async addReservation(dto: CreateReservationDto) {
-    const seatIds = [...new Set(dto.seatIds)].sort();
-    if (seatIds.length !== dto.seatIds.length)
+    const uniqueSeatIds = [...new Set(dto.seatIds)].sort();
+    if (uniqueSeatIds.length !== dto.seatIds.length)
       throw new BadRequestException('Duplicated seats in request.');
 
     const seats = await this.sessionRepository.loadSeatsBySessionId(
       dto.sessionId,
     );
 
-    this.ensureExistsSeats(seats, seatIds);
-    await this.ensureSeatsAvaibility(dto.sessionId, seatIds);
+    this.ensureExistsSeats(seats, uniqueSeatIds);
+    await this.ensureSeatsAvaibility(dto.sessionId, uniqueSeatIds);
 
     const expiresAt = new Date(Date.now() + this.#EXPIRE_SEC);
     const reservation = await this.reservationRepository.add({
       sessionId: dto.sessionId,
       userId: dto.userId,
-      seatIds,
+      seatIds: uniqueSeatIds,
       expiresAt,
     });
 
@@ -42,9 +42,9 @@ export class AddReservationService {
 
   private ensureExistsSeats(seats: Seat[], seatIds: string[]) {
     const seatIdSet = new Set(seats.map((seat) => seat.id));
-    const missingSeats = seatIds.filter((seatId) => !seatIdSet.has(seatId));
+    const missingSeatsIds = seatIds.filter((seatId) => !seatIdSet.has(seatId));
 
-    if (missingSeats.length > 0)
+    if (missingSeatsIds.length > 0)
       throw new BadRequestException(
         'Some seats were not found for this session.',
       );
