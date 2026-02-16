@@ -9,6 +9,8 @@ import { RemoveReservationService } from './services/remove-reservation/remove-r
 import { Reservation } from './entities/reservation.entity';
 import { ReservationSeat } from './entities/reservation-seat.entity';
 import { ReservationExpirationConsumer } from './consumers/reservation-expiration.consumer';
+import { ReservationExpirationScheduler } from './schedulers/reservation-expiration.scheduler';
+import { ExpireReservationService } from './services/expire-reservation/expire-reservation.service';
 import { EventsModule } from '../../shared/events/events.module';
 import { ReservationRepository } from './repositories/contracts/reservation.repository';
 import { ReservationTypeOrmRepository } from './repositories/reservation.repository';
@@ -30,6 +32,8 @@ import { QueueModule } from '../../infra/queue/queue.module';
     UpdateReservationService,
     RemoveReservationService,
     ReservationExpirationConsumer,
+    ReservationExpirationScheduler,
+    ExpireReservationService,
     {
       provide: ReservationRepository,
       useClass: ReservationTypeOrmRepository,

@@ -2,40 +2,25 @@ import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { QueueService } from '../../../infra/queue/rabbitmq.service';
 import { EventName } from '../../../shared/events/types/event-names';
-import { EventsService } from '../../../shared/events/usecases/events.service';
-import { Reservation } from '../entities/reservation.entity';
-import { ReservationRepository } from '../repositories/contracts/reservation.repository';
-
-type ReservationExpirationPayload = {
-  reservationId: string;
-  sessionId: string;
-  seatIds: string[];
-};
+import { ReservationExpirationPayload } from '../types/reservation-expiration.payload';
+import { ExpireReservationService } from '../services/expire-reservation/expire-reservation.service';
 
 @Injectable()
 export class ReservationExpirationConsumer implements OnModuleInit {
   private readonly logger = new Logger(ReservationExpirationConsumer.name);
   private readonly eventsExchange: string;
-  private readonly delayQueue: string;
   private readonly expiredQueue: string;
-  private readonly delayRoutingKey: string;
   private topologyReady = false;
 
   constructor(
     private readonly queueService: QueueService,
     private readonly configService: ConfigService,
-    private readonly reservationRepository: ReservationRepository,
-    private readonly eventsService: EventsService,
+    private readonly expireReservationService: ExpireReservationService,
   ) {
     this.eventsExchange = this.configService.get<string>(
       'EVENTS_EXCHANGE',
       'cinema.events',
     );
-    this.delayQueue = this.configService.get<string>(
-      'RESERVATION_EXPIRATION_DELAY_QUEUE',
-      'reservation.expiration.delay',
-    );
-    this.delayRoutingKey = this.delayQueue;
     this.expiredQueue = this.configService.get<string>(
       'RESERVATION_EXPIRED_QUEUE',
       'reservation.expired',
@@ -53,24 +38,6 @@ export class ReservationExpirationConsumer implements OnModuleInit {
     );
   }
 
-  async schedule(reservation: Reservation, seatIds: string[]) {
-    await this.ensureTopology();
-
-    const delayMs = Math.max(
-      0,
-      reservation.expiresAt.getTime() - Date.now(),
-    );
-    const payload: ReservationExpirationPayload = {
-      reservationId: reservation.id,
-      sessionId: reservation.sessionId,
-      seatIds,
-    };
-
-    await this.queueService.publish(this.eventsExchange, this.delayRoutingKey, payload, {
-      expiration: String(delayMs),
-    });
-  }
-
   private async ensureTopology() {
     if (this.topologyReady) {
       return;
@@ -79,18 +46,6 @@ export class ReservationExpirationConsumer implements OnModuleInit {
     await this.queueService.assertExchange(this.eventsExchange, 'topic', {
       durable: true,
     });
-    await this.queueService.assertQueue(this.delayQueue, {
-      durable: true,
-      arguments: {
-        'x-dead-letter-exchange': this.eventsExchange,
-        'x-dead-letter-routing-key': EventName.ReservationExpired,
-      },
-    });
-    await this.queueService.bindQueue(
-      this.delayQueue,
-      this.eventsExchange,
-      this.delayRoutingKey,
-    );
     await this.queueService.assertQueue(this.expiredQueue, { durable: true });
     await this.queueService.bindQueue(
       this.expiredQueue,
@@ -107,27 +62,7 @@ export class ReservationExpirationConsumer implements OnModuleInit {
       return;
     }
 
-    const expired = await this.reservationRepository.expireIfNeeded(
-      message.reservationId,
-      new Date(),
-    );
-
-    if (!expired) {
-      return;
-    }
-
-    try {
-      await this.eventsService.publish(EventName.SeatReleased, {
-        reservationId: message.reservationId,
-        sessionId: message.sessionId,
-        seatIds: message.seatIds,
-      });
-    } catch (error) {
-      this.logger.error(
-        '(ReservationExpirationConsumer) Failed to publish seat released event',
-        error instanceof Error ? error.stack : String(error),
-      );
-    }
+    await this.expireReservationService.expireReservation(message);
   }
 
   private parsePayload(payload: unknown): ReservationExpirationPayload | null {
