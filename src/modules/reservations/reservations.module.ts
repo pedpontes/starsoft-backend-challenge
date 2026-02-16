@@ -8,6 +8,7 @@ import { UpdateReservationService } from './services/update-reservation/update-r
 import { RemoveReservationService } from './services/remove-reservation/remove-reservation.service';
 import { Reservation } from './entities/reservation.entity';
 import { ReservationSeat } from './entities/reservation-seat.entity';
+import { SeatLock } from './entities/seat-lock.entity';
 import { ReservationExpirationConsumer } from './consumers/reservation-expiration.consumer';
 import { ReservationExpirationScheduler } from './schedulers/reservation-expiration.scheduler';
 import { ExpireReservationService } from './services/expire-reservation/expire-reservation.service';
@@ -19,7 +20,7 @@ import { QueueModule } from '../../infra/queue/queue.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Reservation, ReservationSeat]),
+    TypeOrmModule.forFeature([Reservation, ReservationSeat, SeatLock]),
     EventsModule,
     SessionsModule,
     QueueModule,

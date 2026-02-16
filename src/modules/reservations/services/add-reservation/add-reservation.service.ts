@@ -13,6 +13,7 @@ import { SeatAvailabilityCacheService } from '../../../sessions/services/seat-av
 import { SeatStatus } from '../../../sessions/types/seat-status';
 import { ReservationExpirationScheduler } from '../../schedulers/reservation-expiration.scheduler';
 import { Reservation } from '../../entities/reservation.entity';
+import { SeatAlreadyLockedError } from '../../errors/seat-already-locked.error';
 
 @Injectable()
 export class AddReservationService {
@@ -39,12 +40,20 @@ export class AddReservationService {
     await this.ensureSeatsAvaibility(dto.sessionId, uniqueSeatIds);
 
     const expiresAt = new Date(Date.now() + this.#EXPIRE_SEC);
-    const reservation = await this.reservationRepository.add({
-      sessionId: dto.sessionId,
-      userId: dto.userId,
-      seatIds: uniqueSeatIds,
-      expiresAt,
-    });
+    let reservation: Reservation;
+    try {
+      reservation = await this.reservationRepository.add({
+        sessionId: dto.sessionId,
+        userId: dto.userId,
+        seatIds: uniqueSeatIds,
+        expiresAt,
+      });
+    } catch (error) {
+      if (error instanceof SeatAlreadyLockedError) {
+        throw new ConflictException('Some seats are already reserved.');
+      }
+      throw error;
+    }
 
     const ttlSeconds = Math.max(
       1,

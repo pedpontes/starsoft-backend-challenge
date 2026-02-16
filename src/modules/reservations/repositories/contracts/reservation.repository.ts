@@ -34,5 +34,9 @@ export abstract class ReservationRepository {
     id: Reservation['id'],
     now: Date,
   ): Promise<boolean>;
+  abstract releaseSeatLocks(
+    reservationId: Reservation['id'],
+    releasedAt: Date,
+  ): Promise<void>;
   abstract remove(id: Reservation['id']): Promise<boolean>;
 }

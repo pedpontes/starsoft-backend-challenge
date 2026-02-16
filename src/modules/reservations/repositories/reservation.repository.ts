@@ -1,7 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, QueryFailedError, Repository } from 'typeorm';
 import { Reservation, ReservationStatus } from '../entities/reservation.entity';
 import { ReservationSeat } from '../entities/reservation-seat.entity';
+import { SeatLock } from '../entities/seat-lock.entity';
+import { SeatAlreadyLockedError } from '../errors/seat-already-locked.error';
 import {
   ReservationRepository,
   AddReservationInput,
@@ -10,44 +12,70 @@ import {
 import {
   ReservationsPaginationOrderBy,
   ReservationsPaginationRequest,
-  ReservationsPaginationResponse,
 } from '../types/reservations.pagination';
 
 @Injectable()
 export class ReservationTypeOrmRepository extends ReservationRepository {
   #reservation: Repository<Reservation>;
-  #reservationSeat: Repository<ReservationSeat>;
+  #seatLock: Repository<SeatLock>;
   #logger: Logger;
 
   constructor(private readonly dataSource: DataSource) {
     super();
     this.#reservation = this.dataSource.getRepository(Reservation);
-    this.#reservationSeat = this.dataSource.getRepository(ReservationSeat);
+    this.#seatLock = this.dataSource.getRepository(SeatLock);
     this.#logger = new Logger(ReservationTypeOrmRepository.name);
   }
 
   async add(input: AddReservationInput) {
     try {
-      const reservation = this.#reservation.create({
-        sessionId: input.sessionId,
-        userId: input.userId,
-        status: input.status ?? ReservationStatus.RESERVED,
-        expiresAt: input.expiresAt,
+      return await this.dataSource.transaction(async (manager) => {
+        const reservationRepo = manager.getRepository(Reservation);
+        const reservationSeatRepo = manager.getRepository(ReservationSeat);
+        const seatLockRepo = manager.getRepository(SeatLock);
+
+        const reservation = reservationRepo.create({
+          sessionId: input.sessionId,
+          userId: input.userId,
+          status: input.status ?? ReservationStatus.RESERVED,
+          expiresAt: input.expiresAt,
+        });
+
+        await reservationRepo.save(reservation);
+
+        const reservationSeats = input.seatIds.map((seatId) =>
+          reservationSeatRepo.create({
+            reservationId: reservation.id,
+            seatId,
+          }),
+        );
+
+        await reservationSeatRepo.save(reservationSeats);
+
+        const seatLocks = input.seatIds.map((seatId) =>
+          seatLockRepo.create({
+            reservationId: reservation.id,
+            sessionId: input.sessionId,
+            seatId,
+            expiresAt: input.expiresAt,
+          }),
+        );
+
+        await seatLockRepo.save(seatLocks);
+
+        return reservation;
       });
-
-      await this.#reservation.save(reservation);
-
-      const reservationSeats = input.seatIds.map((seatId) =>
-        this.#reservationSeat.create({
-          reservationId: reservation.id,
-          seatId,
-        }),
-      );
-
-      await this.#reservationSeat.save(reservationSeats);
-
-      return reservation;
     } catch (e) {
+      const error = e as QueryFailedError & {
+        code?: string;
+        constraint?: string;
+      };
+      if (
+        error.code === '23505' &&
+        error.constraint === 'uniq_seat_locks_active_seat'
+      ) {
+        throw new SeatAlreadyLockedError();
+      }
       this.#logger.error(
         '(ReservationRepository.add) Error create Reservation',
         e instanceof Error ? e.stack : String(e),
@@ -172,6 +200,26 @@ export class ReservationTypeOrmRepository extends ReservationRepository {
       );
       throw new Error(
         '(ReservationRepository.expireIfNeeded) Error expire Reservation',
+      );
+    }
+  }
+
+  async releaseSeatLocks(reservationId: Reservation['id'], releasedAt: Date) {
+    try {
+      await this.#seatLock
+        .createQueryBuilder('seatLock')
+        .update(SeatLock)
+        .set({ releasedAt })
+        .where('seatLock.reservationId = :reservationId', { reservationId })
+        .andWhere('seatLock.releasedAt IS NULL')
+        .execute();
+    } catch (e) {
+      this.#logger.error(
+        '(ReservationRepository.releaseSeatLocks) Error release seat locks',
+        e instanceof Error ? e.stack : String(e),
+      );
+      throw new Error(
+        '(ReservationRepository.releaseSeatLocks) Error release seat locks',
       );
     }
   }
