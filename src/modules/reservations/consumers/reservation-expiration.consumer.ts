@@ -13,11 +13,12 @@ type ReservationExpirationPayload = {
 };
 
 @Injectable()
-export class ReservationExpirationService implements OnModuleInit {
-  private readonly logger = new Logger(ReservationExpirationService.name);
+export class ReservationExpirationConsumer implements OnModuleInit {
+  private readonly logger = new Logger(ReservationExpirationConsumer.name);
   private readonly eventsExchange: string;
   private readonly delayQueue: string;
   private readonly expiredQueue: string;
+  private readonly delayRoutingKey: string;
   private topologyReady = false;
 
   constructor(
@@ -34,6 +35,7 @@ export class ReservationExpirationService implements OnModuleInit {
       'RESERVATION_EXPIRATION_DELAY_QUEUE',
       'reservation.expiration.delay',
     );
+    this.delayRoutingKey = this.delayQueue;
     this.expiredQueue = this.configService.get<string>(
       'RESERVATION_EXPIRED_QUEUE',
       'reservation.expired',
@@ -64,7 +66,7 @@ export class ReservationExpirationService implements OnModuleInit {
       seatIds,
     };
 
-    await this.queueService.publish('', this.delayQueue, payload, {
+    await this.queueService.publish(this.eventsExchange, this.delayRoutingKey, payload, {
       expiration: String(delayMs),
     });
   }
@@ -84,6 +86,11 @@ export class ReservationExpirationService implements OnModuleInit {
         'x-dead-letter-routing-key': EventName.ReservationExpired,
       },
     });
+    await this.queueService.bindQueue(
+      this.delayQueue,
+      this.eventsExchange,
+      this.delayRoutingKey,
+    );
     await this.queueService.assertQueue(this.expiredQueue, { durable: true });
     await this.queueService.bindQueue(
       this.expiredQueue,
@@ -117,7 +124,7 @@ export class ReservationExpirationService implements OnModuleInit {
       });
     } catch (error) {
       this.logger.error(
-        '(ReservationExpirationService) Failed to publish seat released event',
+        '(ReservationExpirationConsumer) Failed to publish seat released event',
         error instanceof Error ? error.stack : String(error),
       );
     }

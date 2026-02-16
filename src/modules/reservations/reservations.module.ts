@@ -8,7 +8,7 @@ import { UpdateReservationService } from './services/update-reservation/update-r
 import { RemoveReservationService } from './services/remove-reservation/remove-reservation.service';
 import { Reservation } from './entities/reservation.entity';
 import { ReservationSeat } from './entities/reservation-seat.entity';
-import { ReservationExpirationService } from './jobs/reservation-expiration.service';
+import { ReservationExpirationConsumer } from './consumers/reservation-expiration.consumer';
 import { EventsModule } from '../../shared/events/events.module';
 import { ReservationRepository } from './repositories/contracts/reservation.repository';
 import { ReservationTypeOrmRepository } from './repositories/reservation.repository';
@@ -29,7 +29,7 @@ import { QueueModule } from '../../infra/queue/queue.module';
     LoadReservationService,
     UpdateReservationService,
     RemoveReservationService,
-    ReservationExpirationService,
+    ReservationExpirationConsumer,
     {
       provide: ReservationRepository,
       useClass: ReservationTypeOrmRepository,

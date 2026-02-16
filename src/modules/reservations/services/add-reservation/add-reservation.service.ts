@@ -11,7 +11,7 @@ import { EventsService } from 'src/shared/events/usecases/events.service';
 import { EventName } from 'src/shared/events/types/event-names';
 import { SeatAvailabilityCacheService } from '../../../sessions/services/seat-availability-cache/seat-availability-cache.service';
 import { SeatStatus } from '../../../sessions/types/seat-status';
-import { ReservationExpirationService } from '../../jobs/reservation-expiration.service';
+import { ReservationExpirationConsumer } from '../../consumers/reservation-expiration.consumer';
 import { Reservation } from '../../entities/reservation.entity';
 
 @Injectable()
@@ -23,7 +23,7 @@ export class AddReservationService {
     private readonly sessionRepository: SessionRepository,
     private readonly eventsService: EventsService,
     private readonly seatAvailabilityCacheService: SeatAvailabilityCacheService,
-    private readonly reservationExpirationService: ReservationExpirationService,
+    private readonly reservationExpirationService: ReservationExpirationConsumer,
   ) {}
 
   async addReservation(dto: CreateReservationDto) {
