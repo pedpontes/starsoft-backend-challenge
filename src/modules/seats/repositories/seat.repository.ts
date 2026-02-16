@@ -2,8 +2,11 @@ import { Injectable } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { Seat } from '../entities/seat.entity';
 import { Session } from '../../sessions/entities/session.entity';
-import { AddSeatDto } from '../dtos/add-seat.dto';
-import { SeatRepository } from './contracts/seat.repository';
+import {
+  SeatRepository,
+  AddSeatDto,
+  UpdateSeatDto,
+} from './contracts/seat.repository';
 import {
   SeatsPaginationOrderBy,
   SeatsPaginationRequest,
@@ -96,7 +99,7 @@ export class SeatTypeOrmRepository extends SeatRepository {
     }
   }
 
-  async update(id: Seat['id'], updates: Partial<AddSeatDto>) {
+  async update(id: Seat['id'], updates: UpdateSeatDto) {
     try {
       const seat = await this.#seat.findOne({
         where: { id: id },

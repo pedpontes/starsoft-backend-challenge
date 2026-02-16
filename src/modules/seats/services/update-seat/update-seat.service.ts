@@ -4,7 +4,10 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { UpdateSeatDto } from '../../dtos/update-seat.dto';
-import { SeatRepository } from '../../repositories/contracts/seat.repository';
+import {
+  SeatRepository,
+  UpdateSeatDto as UpdateSeatRepositoryDto,
+} from '../../repositories/contracts/seat.repository';
 
 @Injectable()
 export class UpdateSeatService {
@@ -15,7 +18,8 @@ export class UpdateSeatService {
       throw new BadRequestException('No fields to update.');
     }
 
-    const seat = await this.seatRepository.update(id, { label: dto.label });
+    const updates: UpdateSeatRepositoryDto = { label: dto.label };
+    const seat = await this.seatRepository.update(id, updates);
     if (!seat) {
       throw new NotFoundException('Seat not found.');
     }

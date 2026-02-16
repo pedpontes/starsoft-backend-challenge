@@ -5,10 +5,10 @@ import { ReservationSeat } from '../../reservations/entities/reservation-seat.en
 import { ReservationStatus } from '../../reservations/entities/reservation.entity';
 import { SaleSeat } from '../../payments/entities/sale-seat.entity';
 import { Session } from '../entities/session.entity';
-import { CreateSessionDto } from '../dtos/create-session.dto';
 import {
   SessionRepository,
-  SessionUpdateInput,
+  AddSessionDto,
+  UpdateSessionDto,
 } from './contracts/session.repository';
 import {
   SessionsPaginationOrderBy,
@@ -31,7 +31,7 @@ export class SessionTypeOrmRepository extends SessionRepository {
     this.#saleSeat = this.dataSource.getRepository(SaleSeat);
   }
 
-  async add(addSession: CreateSessionDto, seatLabels: string[]) {
+  async add(addSession: AddSessionDto, seatLabels: string[]) {
     try {
       return await this.dataSource.transaction(async (manager) => {
         const sessionRepo = manager.getRepository(Session);
@@ -39,9 +39,9 @@ export class SessionTypeOrmRepository extends SessionRepository {
 
         const session = sessionRepo.create({
           movieTitle: addSession.movieTitle,
-          startsAt: new Date(addSession.startsAt),
+          startsAt: addSession.startsAt,
           room: addSession.room,
-          price: addSession.price.toFixed(2),
+          price: addSession.price,
         });
 
         await sessionRepo.save(session);
@@ -197,7 +197,7 @@ export class SessionTypeOrmRepository extends SessionRepository {
     }
   }
 
-  async update(id: Session['id'], updates: SessionUpdateInput) {
+  async update(id: Session['id'], updates: UpdateSessionDto) {
     try {
       const session = await this.#session.findOne({
         where: { id: id },

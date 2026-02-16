@@ -1,6 +1,9 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { CreateSessionDto } from '../../dtos/create-session.dto';
-import { SessionRepository } from '../../repositories/contracts/session.repository';
+import {
+  AddSessionDto as AddSessionRepositoryDto,
+  SessionRepository,
+} from '../../repositories/contracts/session.repository';
 
 @Injectable()
 export class AddSessionService {
@@ -10,7 +13,14 @@ export class AddSessionService {
 
   async addSession(dto: CreateSessionDto) {
     const labels = this.resolveSeatLabels(dto);
-    return await this.sessionRepository.add(dto, labels);
+    const addSession: AddSessionRepositoryDto = {
+      movieTitle: dto.movieTitle,
+      startsAt: new Date(dto.startsAt),
+      room: dto.room,
+      price: dto.price.toFixed(2),
+    };
+
+    return await this.sessionRepository.add(addSession, labels);
   }
 
   private resolveSeatLabels(dto: CreateSessionDto) {

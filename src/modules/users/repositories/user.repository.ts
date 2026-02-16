@@ -1,8 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { User } from '../entities/user.entity';
-import { AddUserDto } from '../dtos/add-user.dto';
-import { UserRepository } from './contracts/user.repository';
+import {
+  UserRepository,
+  AddUserDto,
+  UpdateUserDto,
+} from './contracts/user.repository';
 import {
   UsersPaginationOrderBy,
   UsersPaginationRequest,
@@ -89,7 +92,7 @@ export class UserTypeOrmRepository extends UserRepository {
     }
   }
 
-  async update(id: User['id'], updates: Partial<AddUserDto>) {
+  async update(id: User['id'], updates: UpdateUserDto) {
     try {
       const user = await this.#user.findOne({
         where: {

@@ -3,9 +3,9 @@ import { DataSource, Repository } from 'typeorm';
 import { Reservation, ReservationStatus } from '../entities/reservation.entity';
 import { ReservationSeat } from '../entities/reservation-seat.entity';
 import {
-  ReservationAddInput,
   ReservationRepository,
-  ReservationUpdateInput,
+  AddReservationDto,
+  UpdateReservationDto,
 } from './contracts/reservation.repository';
 import {
   ReservationsPaginationOrderBy,
@@ -24,7 +24,7 @@ export class ReservationTypeOrmRepository extends ReservationRepository {
     this.#reservationSeat = this.dataSource.getRepository(ReservationSeat);
   }
 
-  async add(input: ReservationAddInput) {
+  async add(input: AddReservationDto) {
     try {
       const reservation = this.#reservation.create({
         sessionId: input.sessionId,
@@ -124,7 +124,7 @@ export class ReservationTypeOrmRepository extends ReservationRepository {
     }
   }
 
-  async update(id: Reservation['id'], updates: ReservationUpdateInput) {
+  async update(id: Reservation['id'], updates: UpdateReservationDto) {
     try {
       const reservation = await this.#reservation.findOne({
         where: { id },

@@ -6,7 +6,7 @@ import {
 import { UpdateSessionDto } from '../../dtos/update-session.dto';
 import {
   SessionRepository,
-  SessionUpdateInput,
+  UpdateSessionDto as UpdateSessionRepositoryDto,
 } from '../../repositories/contracts/session.repository';
 
 @Injectable()
@@ -25,7 +25,9 @@ export class UpdateSessionService {
     return session;
   }
 
-  private buildUpdateInput(dto: UpdateSessionDto): SessionUpdateInput {
+  private buildUpdateInput(
+    dto: UpdateSessionDto,
+  ): UpdateSessionRepositoryDto {
     if (
       !dto.movieTitle &&
       !dto.startsAt &&
@@ -35,7 +37,7 @@ export class UpdateSessionService {
       throw new BadRequestException('No fields to update.');
     }
 
-    const updates: SessionUpdateInput = {};
+    const updates: UpdateSessionRepositoryDto = {};
     if (dto.movieTitle) {
       updates.movieTitle = dto.movieTitle;
     }

@@ -1,5 +1,6 @@
 import { Seat } from '../../entities/seat.entity';
-import { AddSeatDto } from '../../dtos/add-seat.dto';
+import { AddSeatDto } from '../dtos/add-seat.dto';
+import { UpdateSeatDto } from '../dtos/update-seat.dto';
 import {
   SeatsPaginationRequest,
   SeatsPaginationResponse,
@@ -11,9 +12,6 @@ export abstract class SeatRepository {
   abstract loadAll(
     request: SeatsPaginationRequest,
   ): Promise<SeatsPaginationResponse>;
-  abstract update(
-    id: Seat['id'],
-    updates: Partial<AddSeatDto>,
-  ): Promise<Seat | null>;
+  abstract update(id: Seat['id'], updates: UpdateSeatDto): Promise<Seat | null>;
   abstract remove(id: Seat['id']): Promise<boolean>;
 }

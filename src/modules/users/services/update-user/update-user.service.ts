@@ -4,7 +4,10 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { UpdateUserDto } from '../../dtos/update-user.dto';
-import { UserRepository } from '../../repositories/contracts/user.repository';
+import {
+  UpdateUserDto as UpdateUserRepositoryDto,
+  UserRepository,
+} from '../../repositories/contracts/user.repository';
 
 @Injectable()
 export class UpdateUserService {
@@ -15,7 +18,15 @@ export class UpdateUserService {
       throw new BadRequestException('No fields to update.');
     }
 
-    const user = await this.userRepository.update(userId, dto);
+    const updates: UpdateUserRepositoryDto = {};
+    if (dto.name) {
+      updates.name = dto.name;
+    }
+    if (dto.email) {
+      updates.email = dto.email;
+    }
+
+    const user = await this.userRepository.update(userId, updates);
     if (!user) throw new NotFoundException('User not found.');
 
     return user;

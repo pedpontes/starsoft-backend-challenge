@@ -6,7 +6,7 @@ import {
 import { UpdateReservationDto } from '../../dtos/update-reservation.dto';
 import {
   ReservationRepository,
-  ReservationUpdateInput,
+  UpdateReservationDto as UpdateReservationRepositoryDto,
 } from '../../repositories/contracts/reservation.repository';
 
 @Injectable()
@@ -20,7 +20,7 @@ export class UpdateReservationService {
       throw new BadRequestException('No fields to update.');
     }
 
-    const updates: ReservationUpdateInput = {};
+    const updates: UpdateReservationRepositoryDto = {};
     if (dto.status) {
       updates.status = dto.status;
     }
