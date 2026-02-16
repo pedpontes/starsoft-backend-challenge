@@ -6,6 +6,7 @@ import { SeatsModule } from './modules/seats/seats.module';
 import { ReservationsModule } from './modules/reservations/reservations.module';
 import { PaymentsModule } from './modules/payments/payments.module';
 import { UsersModule } from './modules/users/users.module';
+import { EventsAuditModule } from './modules/events/events.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { UsersModule } from './modules/users/users.module';
     ReservationsModule,
     PaymentsModule,
     UsersModule,
+    EventsAuditModule,
   ],
   controllers: [],
   providers: [],

@@ -11,6 +11,8 @@ import { EventsService } from 'src/shared/events/usecases/events.service';
 import { EventName } from 'src/shared/events/types/event-names';
 import { SeatAvailabilityCacheService } from '../../../sessions/services/seat-availability-cache/seat-availability-cache.service';
 import { SeatStatus } from '../../../sessions/types/seat-status';
+import { ReservationExpirationService } from '../../jobs/reservation-expiration.service';
+import { Reservation } from '../../entities/reservation.entity';
 
 @Injectable()
 export class AddReservationService {
@@ -21,6 +23,7 @@ export class AddReservationService {
     private readonly sessionRepository: SessionRepository,
     private readonly eventsService: EventsService,
     private readonly seatAvailabilityCacheService: SeatAvailabilityCacheService,
+    private readonly reservationExpirationService: ReservationExpirationService,
   ) {}
 
   async addReservation(dto: CreateReservationDto) {
@@ -53,6 +56,7 @@ export class AddReservationService {
       SeatStatus.RESERVED,
       ttlSeconds,
     );
+    await this.safeScheduleExpiration(reservation, uniqueSeatIds);
     await this.eventsService.publish(EventName.ReservationCreated, reservation);
 
     return reservation;
@@ -93,8 +97,15 @@ export class AddReservationService {
         status,
         ttlSeconds,
       );
-    } catch {
-      // Best-effort cache update.
-    }
+    } catch {}
+  }
+
+  private async safeScheduleExpiration(
+    reservation: Reservation,
+    seatIds: string[],
+  ) {
+    try {
+      await this.reservationExpirationService.schedule(reservation, seatIds);
+    } catch {}
   }
 }

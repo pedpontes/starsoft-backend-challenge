@@ -13,12 +13,14 @@ import { EventsModule } from '../../shared/events/events.module';
 import { ReservationRepository } from './repositories/contracts/reservation.repository';
 import { ReservationTypeOrmRepository } from './repositories/reservation.repository';
 import { SessionsModule } from '../sessions/sessions.module';
+import { QueueModule } from '../../infra/queue/queue.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Reservation, ReservationSeat]),
     EventsModule,
     SessionsModule,
+    QueueModule,
   ],
   controllers: [ReservationsController],
   providers: [

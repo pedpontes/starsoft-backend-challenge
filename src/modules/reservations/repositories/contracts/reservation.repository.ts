@@ -30,5 +30,9 @@ export abstract class ReservationRepository {
     id: Reservation['id'],
     updates: UpdateReservationInput,
   ): Promise<Reservation | null>;
+  abstract expireIfNeeded(
+    id: Reservation['id'],
+    now: Date,
+  ): Promise<boolean>;
   abstract remove(id: Reservation['id']): Promise<boolean>;
 }

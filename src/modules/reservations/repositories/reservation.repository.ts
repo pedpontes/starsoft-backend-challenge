@@ -151,6 +151,31 @@ export class ReservationTypeOrmRepository extends ReservationRepository {
     }
   }
 
+  async expireIfNeeded(id: Reservation['id'], now: Date) {
+    try {
+      const result = await this.#reservation
+        .createQueryBuilder('reservation')
+        .update(Reservation)
+        .set({ status: ReservationStatus.EXPIRED })
+        .where('reservation.id = :id', { id })
+        .andWhere('reservation.status = :status', {
+          status: ReservationStatus.RESERVED,
+        })
+        .andWhere('reservation.expiresAt <= :now', { now })
+        .execute();
+
+      return (result.affected ?? 0) > 0;
+    } catch (e) {
+      this.#logger.error(
+        '(ReservationRepository.expireIfNeeded) Error expire Reservation',
+        e instanceof Error ? e.stack : String(e),
+      );
+      throw new Error(
+        '(ReservationRepository.expireIfNeeded) Error expire Reservation',
+      );
+    }
+  }
+
   async remove(id: Reservation['id']) {
     try {
       const result = await this.#reservation.delete({ id });
