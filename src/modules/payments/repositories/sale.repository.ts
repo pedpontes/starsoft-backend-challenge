@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { Sale } from '../entities/sale.entity';
 import { SaleRepository } from './contracts/sale.repository';
@@ -11,10 +11,12 @@ import {
 @Injectable()
 export class SaleTypeOrmRepository extends SaleRepository {
   #sale: Repository<Sale>;
+  #logger: Logger;
 
   constructor(private readonly dataSource: DataSource) {
     super();
     this.#sale = this.dataSource.getRepository(Sale);
+    this.#logger = new Logger(SaleTypeOrmRepository.name);
   }
 
   async loadById(id: Sale['id']) {
@@ -25,7 +27,10 @@ export class SaleTypeOrmRepository extends SaleRepository {
         },
       });
     } catch (e) {
-      console.error('(SaleRepository.loadById) Error load Sale', e);
+      this.#logger.error(
+        '(SaleRepository.loadById) Error load Sale',
+        e instanceof Error ? e.stack : String(e),
+      );
       throw new Error('(SaleRepository.loadById) Error load Sale');
     }
   }
@@ -75,9 +80,9 @@ export class SaleTypeOrmRepository extends SaleRepository {
         count: { total },
       };
     } catch (e) {
-      console.error(
+      this.#logger.error(
         '(SaleRepository.loadPurchaseHistory) Error load Sales',
-        e,
+        e instanceof Error ? e.stack : String(e),
       );
       throw new Error(
         '(SaleRepository.loadPurchaseHistory) Error load Sales',

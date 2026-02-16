@@ -1,11 +1,11 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { Seat } from '../entities/seat.entity';
 import { Session } from '../../sessions/entities/session.entity';
 import {
   SeatRepository,
-  AddSeatDto,
-  UpdateSeatDto,
+  AddSeatInput,
+  UpdateSeatInput,
 } from './contracts/seat.repository';
 import {
   SeatsPaginationOrderBy,
@@ -17,14 +17,16 @@ import {
 export class SeatTypeOrmRepository extends SeatRepository {
   #seat: Repository<Seat>;
   #session: Repository<Session>;
+  #logger: Logger;
 
   constructor(private readonly dataSource: DataSource) {
     super();
     this.#seat = this.dataSource.getRepository(Seat);
     this.#session = this.dataSource.getRepository(Session);
+    this.#logger = new Logger(SeatTypeOrmRepository.name);
   }
 
-  async add(addSeat: AddSeatDto) {
+  async add(addSeat: AddSeatInput) {
     try {
       const session = await this.#session.findOne({
         where: { id: addSeat.sessionId },
@@ -40,7 +42,10 @@ export class SeatTypeOrmRepository extends SeatRepository {
 
       return await this.#seat.save(seat);
     } catch (e) {
-      console.error('(SeatRepository.add) Error create Seat', e);
+      this.#logger.error(
+        '(SeatRepository.add) Error create Seat',
+        e instanceof Error ? e.stack : String(e),
+      );
       throw new Error('(SeatRepository.add) Error create Seat');
     }
   }
@@ -51,7 +56,10 @@ export class SeatTypeOrmRepository extends SeatRepository {
         where: { id: id },
       });
     } catch (e) {
-      console.error('(SeatRepository.loadById) Error load Seat', e);
+      this.#logger.error(
+        '(SeatRepository.loadById) Error load Seat',
+        e instanceof Error ? e.stack : String(e),
+      );
       throw new Error('(SeatRepository.loadById) Error load Seat');
     }
   }
@@ -94,12 +102,15 @@ export class SeatTypeOrmRepository extends SeatRepository {
         count: { total },
       };
     } catch (e) {
-      console.error('(SeatRepository.loadAll) Error load Seats', e);
+      this.#logger.error(
+        '(SeatRepository.loadAll) Error load Seats',
+        e instanceof Error ? e.stack : String(e),
+      );
       throw new Error('(SeatRepository.loadAll) Error load Seats');
     }
   }
 
-  async update(id: Seat['id'], updates: UpdateSeatDto) {
+  async update(id: Seat['id'], updates: UpdateSeatInput) {
     try {
       const seat = await this.#seat.findOne({
         where: { id: id },
@@ -111,7 +122,10 @@ export class SeatTypeOrmRepository extends SeatRepository {
       const next = this.#seat.merge(seat, updates);
       return await this.#seat.save(next);
     } catch (e) {
-      console.error('(SeatRepository.update) Error update Seat', e);
+      this.#logger.error(
+        '(SeatRepository.update) Error update Seat',
+        e instanceof Error ? e.stack : String(e),
+      );
       throw new Error('(SeatRepository.update) Error update Seat');
     }
   }
@@ -121,7 +135,10 @@ export class SeatTypeOrmRepository extends SeatRepository {
       const result = await this.#seat.delete({ id });
       return (result.affected ?? 0) > 0;
     } catch (e) {
-      console.error('(SeatRepository.remove) Error remove Seat', e);
+      this.#logger.error(
+        '(SeatRepository.remove) Error remove Seat',
+        e instanceof Error ? e.stack : String(e),
+      );
       throw new Error('(SeatRepository.remove) Error remove Seat');
     }
   }

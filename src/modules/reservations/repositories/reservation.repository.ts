@@ -1,11 +1,11 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { Reservation, ReservationStatus } from '../entities/reservation.entity';
 import { ReservationSeat } from '../entities/reservation-seat.entity';
 import {
   ReservationRepository,
-  AddReservationDto,
-  UpdateReservationDto,
+  AddReservationInput,
+  UpdateReservationInput,
 } from './contracts/reservation.repository';
 import {
   ReservationsPaginationOrderBy,
@@ -17,14 +17,16 @@ import {
 export class ReservationTypeOrmRepository extends ReservationRepository {
   #reservation: Repository<Reservation>;
   #reservationSeat: Repository<ReservationSeat>;
+  #logger: Logger;
 
   constructor(private readonly dataSource: DataSource) {
     super();
     this.#reservation = this.dataSource.getRepository(Reservation);
     this.#reservationSeat = this.dataSource.getRepository(ReservationSeat);
+    this.#logger = new Logger(ReservationTypeOrmRepository.name);
   }
 
-  async add(input: AddReservationDto) {
+  async add(input: AddReservationInput) {
     try {
       const reservation = this.#reservation.create({
         sessionId: input.sessionId,
@@ -46,7 +48,10 @@ export class ReservationTypeOrmRepository extends ReservationRepository {
 
       return reservation;
     } catch (e) {
-      console.error('(ReservationRepository.add) Error create Reservation', e);
+      this.#logger.error(
+        '(ReservationRepository.add) Error create Reservation',
+        e instanceof Error ? e.stack : String(e),
+      );
       throw new Error('(ReservationRepository.add) Error create Reservation');
     }
   }
@@ -58,9 +63,9 @@ export class ReservationTypeOrmRepository extends ReservationRepository {
         relations: includeSeats ? { seats: true } : undefined,
       });
     } catch (e) {
-      console.error(
+      this.#logger.error(
         '(ReservationRepository.loadById) Error load Reservation',
-        e,
+        e instanceof Error ? e.stack : String(e),
       );
       throw new Error(
         '(ReservationRepository.loadById) Error load Reservation',
@@ -114,9 +119,9 @@ export class ReservationTypeOrmRepository extends ReservationRepository {
         count: { total },
       };
     } catch (e) {
-      console.error(
+      this.#logger.error(
         '(ReservationRepository.loadAll) Error load Reservations',
-        e,
+        e instanceof Error ? e.stack : String(e),
       );
       throw new Error(
         '(ReservationRepository.loadAll) Error load Reservations',
@@ -124,7 +129,7 @@ export class ReservationTypeOrmRepository extends ReservationRepository {
     }
   }
 
-  async update(id: Reservation['id'], updates: UpdateReservationDto) {
+  async update(id: Reservation['id'], updates: UpdateReservationInput) {
     try {
       const reservation = await this.#reservation.findOne({
         where: { id },
@@ -136,9 +141,9 @@ export class ReservationTypeOrmRepository extends ReservationRepository {
       const next = this.#reservation.merge(reservation, updates);
       return await this.#reservation.save(next);
     } catch (e) {
-      console.error(
+      this.#logger.error(
         '(ReservationRepository.update) Error update Reservation',
-        e,
+        e instanceof Error ? e.stack : String(e),
       );
       throw new Error(
         '(ReservationRepository.update) Error update Reservation',
@@ -151,9 +156,9 @@ export class ReservationTypeOrmRepository extends ReservationRepository {
       const result = await this.#reservation.delete({ id });
       return (result.affected ?? 0) > 0;
     } catch (e) {
-      console.error(
+      this.#logger.error(
         '(ReservationRepository.remove) Error remove Reservation',
-        e,
+        e instanceof Error ? e.stack : String(e),
       );
       throw new Error(
         '(ReservationRepository.remove) Error remove Reservation',

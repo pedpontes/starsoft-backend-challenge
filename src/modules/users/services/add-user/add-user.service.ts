@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { AddUserDto } from '../../dtos/add-user.dto';
 import {
-  AddUserDto as AddUserRepositoryDto,
+  AddUserInput,
   UserRepository,
 } from '../../repositories/contracts/user.repository';
 
@@ -10,7 +10,7 @@ export class AddUserService {
   constructor(private readonly userRepository: UserRepository) {}
 
   async addUser(dto: AddUserDto) {
-    const addUser: AddUserRepositoryDto = {
+    const addUser: AddUserInput = {
       email: dto.email,
       name: dto.name,
     };

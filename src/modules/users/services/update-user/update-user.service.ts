@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { UpdateUserDto } from '../../dtos/update-user.dto';
 import {
-  UpdateUserDto as UpdateUserRepositoryDto,
+  UpdateUserInput,
   UserRepository,
 } from '../../repositories/contracts/user.repository';
 
@@ -18,7 +18,7 @@ export class UpdateUserService {
       throw new BadRequestException('No fields to update.');
     }
 
-    const updates: UpdateUserRepositoryDto = {};
+    const updates: UpdateUserInput = {};
     if (dto.name) {
       updates.name = dto.name;
     }

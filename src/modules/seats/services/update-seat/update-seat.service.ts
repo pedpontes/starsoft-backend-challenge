@@ -6,7 +6,7 @@ import {
 import { UpdateSeatDto } from '../../dtos/update-seat.dto';
 import {
   SeatRepository,
-  UpdateSeatDto as UpdateSeatRepositoryDto,
+  UpdateSeatInput,
 } from '../../repositories/contracts/seat.repository';
 
 @Injectable()
@@ -18,7 +18,7 @@ export class UpdateSeatService {
       throw new BadRequestException('No fields to update.');
     }
 
-    const updates: UpdateSeatRepositoryDto = { label: dto.label };
+    const updates: UpdateSeatInput = { label: dto.label };
     const seat = await this.seatRepository.update(id, updates);
     if (!seat) {
       throw new NotFoundException('Seat not found.');

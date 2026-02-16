@@ -5,7 +5,6 @@ import { LoadUsersService } from '../services/load-users/load-users.service';
 import { LoadUserService } from '../services/load-user/load-user.service';
 import { UpdateUserService } from '../services/update-user/update-user.service';
 import { RemoveUserService } from '../services/remove-user/remove-user.service';
-import { LoadPurchaseHistoryService } from '../../payments/services/load-purchase-history/load-purchase-history.service';
 
 describe('UsersController', () => {
   let controller: UsersController;
@@ -19,7 +18,6 @@ describe('UsersController', () => {
         { provide: LoadUserService, useValue: {} },
         { provide: UpdateUserService, useValue: {} },
         { provide: RemoveUserService, useValue: {} },
-        { provide: LoadPurchaseHistoryService, useValue: {} },
       ],
     }).compile();
 

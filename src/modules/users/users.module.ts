@@ -9,10 +9,9 @@ import { RemoveUserService } from './services/remove-user/remove-user.service';
 import { User } from './entities/user.entity';
 import { UserRepository } from './repositories/contracts/user.repository';
 import { UserTypeOrmRepository } from './repositories/user.repository';
-import { PaymentsModule } from '../payments/payments.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([User]), PaymentsModule],
+  imports: [TypeOrmModule.forFeature([User])],
   controllers: [UsersController],
   providers: [
     AddUserService,

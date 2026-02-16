@@ -1,10 +1,10 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { User } from '../entities/user.entity';
 import {
   UserRepository,
-  AddUserDto,
-  UpdateUserDto,
+  AddUserInput,
+  UpdateUserInput,
 } from './contracts/user.repository';
 import {
   UsersPaginationOrderBy,
@@ -15,19 +15,24 @@ import {
 @Injectable()
 export class UserTypeOrmRepository extends UserRepository {
   #user: Repository<User>;
+  #logger: Logger;
 
   constructor(private readonly dataSource: DataSource) {
     super();
     this.#user = this.dataSource.getRepository(User);
+    this.#logger = new Logger(UserTypeOrmRepository.name);
   }
 
-  async add(addUser: AddUserDto) {
+  async add(addUser: AddUserInput) {
     try {
       const user = this.#user.create(addUser);
 
       return await this.#user.save(user);
     } catch (e) {
-      console.error('(UserRepository.add) Error create User', e);
+      this.#logger.error(
+        '(UserRepository.add) Error create User',
+        e instanceof Error ? e.stack : String(e),
+      );
       throw new Error('(UserRepository.add) Error create User');
     }
   }
@@ -40,7 +45,10 @@ export class UserTypeOrmRepository extends UserRepository {
         },
       });
     } catch (e) {
-      console.error('(UserRepository.loadById) Error load User', e);
+      this.#logger.error(
+        '(UserRepository.loadById) Error load User',
+        e instanceof Error ? e.stack : String(e),
+      );
       throw new Error('(UserRepository.loadById) Error load User');
     }
   }
@@ -87,12 +95,15 @@ export class UserTypeOrmRepository extends UserRepository {
         count: { total },
       };
     } catch (e) {
-      console.error('(UserRepository.loadAll) Error load Users', e);
+      this.#logger.error(
+        '(UserRepository.loadAll) Error load Users',
+        e instanceof Error ? e.stack : String(e),
+      );
       throw new Error('(UserRepository.loadAll) Error load Users');
     }
   }
 
-  async update(id: User['id'], updates: UpdateUserDto) {
+  async update(id: User['id'], updates: UpdateUserInput) {
     try {
       const user = await this.#user.findOne({
         where: {
@@ -106,7 +117,10 @@ export class UserTypeOrmRepository extends UserRepository {
       const next = this.#user.merge(user, updates);
       return await this.#user.save(next);
     } catch (e) {
-      console.error('(UserRepository.update) Error update User', e);
+      this.#logger.error(
+        '(UserRepository.update) Error update User',
+        e instanceof Error ? e.stack : String(e),
+      );
       throw new Error('(UserRepository.update) Error update User');
     }
   }
@@ -116,7 +130,10 @@ export class UserTypeOrmRepository extends UserRepository {
       const result = await this.#user.delete({ id });
       return (result.affected ?? 0) > 0;
     } catch (e) {
-      console.error('(UserRepository.remove) Error remove User', e);
+      this.#logger.error(
+        '(UserRepository.remove) Error remove User',
+        e instanceof Error ? e.stack : String(e),
+      );
       throw new Error('(UserRepository.remove) Error remove User');
     }
   }

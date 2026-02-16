@@ -1,15 +1,19 @@
 import { Seat } from '../../../seats/entities/seat.entity';
 import { Session } from '../../entities/session.entity';
-import { AddSessionDto } from '../dtos/add-session.dto';
-import { UpdateSessionDto } from '../dtos/update-session.dto';
 import {
   SessionsPaginationRequest,
   SessionsPaginationResponse,
 } from '../../types/sessions.pagination';
 
+export type AddSessionInput = Pick<
+  Session,
+  'movieTitle' | 'startsAt' | 'room' | 'price'
+>;
+export type UpdateSessionInput = Partial<AddSessionInput>;
+
 export abstract class SessionRepository {
   abstract add(
-    addSession: AddSessionDto,
+    addSession: AddSessionInput,
     seatLabels: string[],
   ): Promise<{ sessionId: string; seatsCount: number }>;
   abstract loadAll(
@@ -27,9 +31,7 @@ export abstract class SessionRepository {
   ): Promise<Seat['id'][]>;
   abstract update(
     id: Session['id'],
-    updates: UpdateSessionDto,
+    updates: UpdateSessionInput,
   ): Promise<Session | null>;
   abstract remove(id: Session['id']): Promise<boolean>;
 }
-
-export { AddSessionDto, UpdateSessionDto };

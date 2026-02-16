@@ -1,22 +1,21 @@
 import { User } from '../../entities/user.entity';
-import { AddUserDto } from '../dtos/add-user.dto';
-import { UpdateUserDto } from '../dtos/update-user.dto';
 import {
   UsersPaginationRequest,
   UsersPaginationResponse,
 } from '../../types/users.pagination';
 
+export type AddUserInput = Pick<User, 'name' | 'email'>;
+export type UpdateUserInput = Partial<Pick<User, 'name' | 'email'>>;
+
 export abstract class UserRepository {
-  abstract add(addUser: AddUserDto): Promise<User>;
+  abstract add(addUser: AddUserInput): Promise<User>;
   abstract loadById(id: User['id']): Promise<User | null>;
   abstract loadAll(
     request: UsersPaginationRequest,
   ): Promise<UsersPaginationResponse>;
   abstract update(
     id: User['id'],
-    updates: UpdateUserDto,
+    updates: UpdateUserInput,
   ): Promise<User | null>;
   abstract remove(id: User['id']): Promise<boolean>;
 }
-
-export { AddUserDto, UpdateUserDto };

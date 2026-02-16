@@ -17,8 +17,6 @@ import { LoadUsersService } from '../services/load-users/load-users.service';
 import { LoadUserService } from '../services/load-user/load-user.service';
 import { UpdateUserService } from '../services/update-user/update-user.service';
 import { RemoveUserService } from '../services/remove-user/remove-user.service';
-import { LoadPurchaseHistoryService } from '../../payments/services/load-purchase-history/load-purchase-history.service';
-import { SalePaginationRequestDto } from '../../payments/dtos/sale-pagination-request.dto';
 
 @Controller('users')
 export class UsersController {
@@ -28,7 +26,6 @@ export class UsersController {
     private readonly loadUserService: LoadUserService,
     private readonly updateUserService: UpdateUserService,
     private readonly removeUserService: RemoveUserService,
-    private readonly loadPurchaseHistoryService: LoadPurchaseHistoryService,
   ) {}
 
   @Post()
@@ -64,17 +61,5 @@ export class UsersController {
   async remove(@Param('id', new ParseUUIDPipe()) id: string) {
     await this.removeUserService.removeUser(id);
     return { id };
-  }
-
-  @Get(':id/sales')
-  async sales(
-    @Param('id', new ParseUUIDPipe()) id: string,
-    @Query() pagination: SalePaginationRequestDto,
-  ) {
-    const sales = await this.loadPurchaseHistoryService.loadPurchaseHistory(
-      id,
-      pagination,
-    );
-    return { userId: id, sales };
   }
 }

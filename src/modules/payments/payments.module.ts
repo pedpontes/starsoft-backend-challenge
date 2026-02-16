@@ -20,6 +20,5 @@ import { SaleTypeOrmRepository } from './repositories/sale.repository';
       useClass: SaleTypeOrmRepository,
     },
   ],
-  exports: [LoadPurchaseHistoryService],
 })
 export class PaymentsModule {}

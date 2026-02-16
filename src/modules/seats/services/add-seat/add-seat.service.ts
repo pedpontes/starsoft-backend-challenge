@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { AddSeatDto } from '../../dtos/add-seat.dto';
 import {
-  AddSeatDto as AddSeatRepositoryDto,
+  AddSeatInput,
   SeatRepository,
 } from '../../repositories/contracts/seat.repository';
 
@@ -10,7 +10,7 @@ export class AddSeatService {
   constructor(private readonly seatRepository: SeatRepository) {}
 
   async addSeat(dto: AddSeatDto) {
-    const addSeat: AddSeatRepositoryDto = {
+    const addSeat: AddSeatInput = {
       sessionId: dto.sessionId,
       label: dto.label,
     };
