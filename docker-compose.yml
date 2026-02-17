@@ -9,11 +9,15 @@ services:
     ports:
       - "3000:3000"
     depends_on:
-      - db
-      - redis
-      - broker
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      broker:
+        condition: service_started
     volumes:
       - ./:/usr/src/app
+      - /usr/src/app/node_modules
     command: npm run start:dev
 
   db:
@@ -23,6 +27,11 @@ services:
       POSTGRES_USER: app
       POSTGRES_PASSWORD: app
       POSTGRES_DB: cinema
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app -d cinema"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
     ports:
       - "5432:5432"
     volumes:
