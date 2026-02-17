@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import * as path from 'path';
 import { SessionsModule } from './modules/sessions/sessions.module';
 import { SeatsModule } from './modules/seats/seats.module';
 import { ReservationsModule } from './modules/reservations/reservations.module';
@@ -26,6 +27,10 @@ import { EventsAuditModule } from './modules/events/events.module';
         database: config.get<string>('DB_NAME'),
         autoLoadEntities: true,
         synchronize: false,
+        migrations: [
+          path.join(__dirname, 'infra/database/migrations/*{.ts,.js}'),
+        ],
+        migrationsRun: true,
       }),
     }),
     SessionsModule,

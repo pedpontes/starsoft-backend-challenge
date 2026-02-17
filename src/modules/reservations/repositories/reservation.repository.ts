@@ -4,6 +4,7 @@ import { Reservation, ReservationStatus } from '../entities/reservation.entity';
 import { ReservationSeat } from '../entities/reservation-seat.entity';
 import { SeatLock } from '../entities/seat-lock.entity';
 import { SeatAlreadyLockedError } from '../errors/seat-already-locked.error';
+import { IdempotencyKeyConflictError } from '../errors/idempotency-key-conflict.error';
 import {
   ReservationRepository,
   AddReservationInput,
@@ -39,6 +40,7 @@ export class ReservationTypeOrmRepository extends ReservationRepository {
           userId: input.userId,
           status: input.status ?? ReservationStatus.RESERVED,
           expiresAt: input.expiresAt,
+          idempotencyKey: input.idempotencyKey ?? null,
         });
 
         await reservationRepo.save(reservation);
@@ -75,6 +77,12 @@ export class ReservationTypeOrmRepository extends ReservationRepository {
         error.constraint === 'uniq_seat_locks_active_seat'
       ) {
         throw new SeatAlreadyLockedError();
+      }
+      if (
+        error.code === '23505' &&
+        error.constraint === 'uniq_reservations_user_idempotency_key'
+      ) {
+        throw new IdempotencyKeyConflictError();
       }
       this.#logger.error(
         '(ReservationRepository.add) Error create Reservation',
@@ -157,6 +165,27 @@ export class ReservationTypeOrmRepository extends ReservationRepository {
     }
   }
 
+  async loadByIdempotencyKey(
+    userId: Reservation['userId'],
+    idempotencyKey: string,
+    includeSeats = false,
+  ) {
+    try {
+      return await this.#reservation.findOne({
+        where: { userId, idempotencyKey },
+        relations: includeSeats ? { seats: true } : undefined,
+      });
+    } catch (e) {
+      this.#logger.error(
+        '(ReservationRepository.loadByIdempotencyKey) Error load Reservation',
+        e instanceof Error ? e.stack : String(e),
+      );
+      throw new Error(
+        '(ReservationRepository.loadByIdempotencyKey) Error load Reservation',
+      );
+    }
+  }
+
   async update(id: Reservation['id'], updates: UpdateReservationInput) {
     try {
       const reservation = await this.#reservation.findOne({
@@ -185,11 +214,13 @@ export class ReservationTypeOrmRepository extends ReservationRepository {
         .createQueryBuilder('reservation')
         .update(Reservation)
         .set({ status: ReservationStatus.EXPIRED })
-        .where('reservation.id = :id', { id })
-        .andWhere('reservation.status = :status', {
+        // UpdateQueryBuilder doesn't define the alias in the UPDATE statement,
+        // so referencing "reservation." causes a missing FROM-clause error.
+        .where('id = :id', { id })
+        .andWhere('status = :status', {
           status: ReservationStatus.RESERVED,
         })
-        .andWhere('reservation.expiresAt <= :now', { now })
+        .andWhere('expiresAt <= :now', { now })
         .execute();
 
       return (result.affected ?? 0) > 0;
@@ -210,8 +241,10 @@ export class ReservationTypeOrmRepository extends ReservationRepository {
         .createQueryBuilder('seatLock')
         .update(SeatLock)
         .set({ releasedAt })
-        .where('seatLock.reservationId = :reservationId', { reservationId })
-        .andWhere('seatLock.releasedAt IS NULL')
+        // UpdateQueryBuilder doesn't define the alias in the UPDATE statement,
+        // so referencing "seatLock." causes a missing FROM-clause error.
+        .where('reservationId = :reservationId', { reservationId })
+        .andWhere('releasedAt IS NULL')
         .execute();
     } catch (e) {
       this.#logger.error(

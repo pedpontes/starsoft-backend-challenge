@@ -23,6 +23,7 @@ export enum ReservationStatus {
 @Index(['sessionId'])
 @Index(['userId'])
 @Index(['expiresAt'])
+@Index(['userId', 'idempotencyKey'], { unique: true })
 export class Reservation {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -53,6 +54,14 @@ export class Reservation {
 
   @Column({ name: 'expires_at', type: 'timestamptz' })
   expiresAt: Date;
+
+  @Column({
+    name: 'idempotency_key',
+    type: 'varchar',
+    length: 120,
+    nullable: true,
+  })
+  idempotencyKey?: string | null;
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;

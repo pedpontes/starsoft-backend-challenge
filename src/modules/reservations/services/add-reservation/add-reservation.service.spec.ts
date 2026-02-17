@@ -10,6 +10,7 @@ import { SeatAvailabilityCacheService } from '../../../sessions/services/seat-av
 import { ReservationExpirationScheduler } from '../../schedulers/reservation-expiration.scheduler';
 import { SeatStatus } from '../../../sessions/types/seat-status';
 import { SeatAlreadyLockedError } from '../../errors/seat-already-locked.error';
+import { IdempotencyKeyConflictError } from '../../errors/idempotency-key-conflict.error';
 import { EventName } from 'src/shared/events/types/event-names';
 import { Reservation } from '../../entities/reservation.entity';
 
@@ -31,6 +32,7 @@ const makeService = (overrides?: {
 }) => {
   const reservationRepository = {
     add: jest.fn().mockResolvedValue(makeReservation()),
+    loadByIdempotencyKey: jest.fn().mockResolvedValue(null),
     ...overrides?.reservationRepository,
   } as unknown as ReservationRepository;
 
@@ -200,6 +202,94 @@ describe('AddReservationService', () => {
       EventName.ReservationCreated,
       reservation,
     );
+  });
+
+  it('returns existing reservation when idempotency key matches request', async () => {
+    const existing = makeReservation({
+      seats: [
+        { seatId: 'seat-1' },
+        { seatId: 'seat-2' },
+      ] as Reservation['seats'],
+    });
+
+    const { service, reservationRepository, sessionRepository, eventsService } =
+      makeService({
+        reservationRepository: {
+          loadByIdempotencyKey: jest.fn().mockResolvedValue(existing),
+          add: jest.fn(),
+        },
+      });
+
+    const result = await service.addReservation(
+      {
+        sessionId: 'sess-1',
+        userId: 'user-1',
+        seatIds: ['seat-1', 'seat-2'],
+      },
+      'idem-1',
+    );
+
+    expect(result).toBe(existing);
+    expect(reservationRepository.add).not.toHaveBeenCalled();
+    expect(sessionRepository.loadSeatsBySessionId).not.toHaveBeenCalled();
+    expect(eventsService.publish).not.toHaveBeenCalled();
+  });
+
+  it('throws ConflictException when idempotency key is reused with different seats', async () => {
+    const existing = makeReservation({
+      seats: [{ seatId: 'seat-1' }] as Reservation['seats'],
+    });
+
+    const { service, reservationRepository } = makeService({
+      reservationRepository: {
+        loadByIdempotencyKey: jest.fn().mockResolvedValue(existing),
+        add: jest.fn(),
+      },
+    });
+
+    await expect(
+      service.addReservation(
+        {
+          sessionId: 'sess-1',
+          userId: 'user-1',
+          seatIds: ['seat-1', 'seat-2'],
+        },
+        'idem-1',
+      ),
+    ).rejects.toBeInstanceOf(ConflictException);
+
+    expect(reservationRepository.add).not.toHaveBeenCalled();
+  });
+
+  it('returns existing reservation when idempotency key conflicts during creation', async () => {
+    const existing = makeReservation({
+      seats: [
+        { seatId: 'seat-1' },
+        { seatId: 'seat-2' },
+      ] as Reservation['seats'],
+    });
+
+    const { service, reservationRepository } = makeService({
+      reservationRepository: {
+        loadByIdempotencyKey: jest
+          .fn()
+          .mockResolvedValueOnce(null)
+          .mockResolvedValueOnce(existing),
+        add: jest.fn().mockRejectedValue(new IdempotencyKeyConflictError()),
+      },
+    });
+
+    const result = await service.addReservation(
+      {
+        sessionId: 'sess-1',
+        userId: 'user-1',
+        seatIds: ['seat-1', 'seat-2'],
+      },
+      'idem-1',
+    );
+
+    expect(result).toBe(existing);
+    expect(reservationRepository.add).toHaveBeenCalledTimes(1);
   });
 
   it('continues when cache update fails', async () => {

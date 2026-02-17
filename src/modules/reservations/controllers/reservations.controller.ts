@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  Headers,
   Param,
   ParseUUIDPipe,
   Patch,
@@ -29,8 +30,14 @@ export class ReservationsController {
   ) {}
 
   @Post()
-  async add(@Body() dto: CreateReservationDto) {
-    const reservation = await this.addReservationService.addReservation(dto);
+  async add(
+    @Body() dto: CreateReservationDto,
+    @Headers('idempotency-key') idempotencyKey?: string,
+  ) {
+    const reservation = await this.addReservationService.addReservation(
+      dto,
+      idempotencyKey,
+    );
     return {
       id: reservation.id,
       expiresAt: reservation.expiresAt,

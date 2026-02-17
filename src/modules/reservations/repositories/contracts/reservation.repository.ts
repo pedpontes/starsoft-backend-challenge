@@ -10,6 +10,7 @@ export type AddReservationInput = {
   seatIds: string[];
   expiresAt: Date;
   status?: ReservationStatus;
+  idempotencyKey?: string | null;
 };
 
 export type UpdateReservationInput = {
@@ -26,6 +27,11 @@ export abstract class ReservationRepository {
   abstract loadAll(
     request: ReservationsPaginationRequest,
   ): Promise<ReservationsPaginationResponse>;
+  abstract loadByIdempotencyKey(
+    userId: Reservation['userId'],
+    idempotencyKey: string,
+    includeSeats?: boolean,
+  ): Promise<Reservation | null>;
   abstract update(
     id: Reservation['id'],
     updates: UpdateReservationInput,
