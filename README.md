@@ -1,5 +1,24 @@
 # Starsoft Backend Challenge - Documentacao da Solucao
 
+## Sumario
+- [Visao Geral](#visao-geral)
+- [Tecnologias Escolhidas](#tecnologias-escolhidas)
+- [Arquitetura e Fluxos](#arquitetura-e-fluxos)
+- [Como Executar](#como-executar)
+- [Pre-requisitos](#pre-requisitos)
+- [Subir com Docker](#subir-com-docker)
+- [Execucao local sem Docker](#execucao-local-sem-docker)
+- [Como Popular Dados Iniciais](#como-popular-dados-iniciais)
+- [Estrategias Implementadas](#estrategias-implementadas)
+- [Endpoints da API](#endpoints-da-api)
+- [Decisoes Tecnicas](#decisoes-tecnicas)
+- [Testes](#testes)
+- [Gerais](#gerais)
+- [E2E de 100 Usuarios](#e2e-de-100-usuarios)
+- [Exemplo de Fluxo para Testar](#exemplo-de-fluxo-para-testar)
+- [Limitacoes Conhecidas](#limitacoes-conhecidas)
+- [Melhorias Futuras](#melhorias-futuras)
+
 ## Visao Geral
 Este projeto implementa um sistema de venda de ingressos para uma rede de cinemas, com foco em alta concorrencia e consistencia. A solucao garante que um assento nao seja vendido duas vezes, suporta reservas com expiracao de 30 segundos, confirma pagamentos, publica eventos em mensageria e disponibiliza consultas de disponibilidade e historico de compras.
 
