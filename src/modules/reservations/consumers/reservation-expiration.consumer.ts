@@ -1,22 +1,23 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { ConsumeMessage } from 'amqplib';
+import { AbstractConsumer } from '../../../infra/queue/abstract-consumer';
 import { QueueService } from '../../../infra/queue/rabbitmq.service';
 import { EventName } from '../../../shared/events/types/event-names';
 import { ReservationExpirationPayload } from '../types/reservation-expiration.payload';
 import { ExpireReservationService } from '../services/expire-reservation/expire-reservation.service';
 
 @Injectable()
-export class ReservationExpirationConsumer implements OnModuleInit {
-  private readonly logger = new Logger(ReservationExpirationConsumer.name);
+export class ReservationExpirationConsumer extends AbstractConsumer<ReservationExpirationPayload> {
   private readonly eventsExchange: string;
   private readonly expiredQueue: string;
-  private topologyReady = false;
 
   constructor(
-    private readonly queueService: QueueService,
+    queueService: QueueService,
     private readonly configService: ConfigService,
     private readonly expireReservationService: ExpireReservationService,
   ) {
+    super(queueService);
     this.eventsExchange = this.configService.get<string>(
       'EVENTS_EXCHANGE',
       'cinema.events',
@@ -27,45 +28,22 @@ export class ReservationExpirationConsumer implements OnModuleInit {
     );
   }
 
-  async onModuleInit() {
-    await this.ensureTopology();
-    await this.queueService.consume(
-      this.expiredQueue,
-      async (payload) => {
-        await this.handleExpiration(payload);
-      },
-      { requeueOnError: true },
-    );
+  protected exchangeName(): string {
+    return this.eventsExchange;
   }
 
-  private async ensureTopology() {
-    if (this.topologyReady) {
-      return;
-    }
-
-    await this.queueService.assertExchange(this.eventsExchange, 'topic', {
-      durable: true,
-    });
-    await this.queueService.assertQueue(this.expiredQueue, { durable: true });
-    await this.queueService.bindQueue(
-      this.expiredQueue,
-      this.eventsExchange,
-      EventName.ReservationExpired,
-    );
-
-    this.topologyReady = true;
+  protected queueName(): string {
+    return this.expiredQueue;
   }
 
-  private async handleExpiration(payload: unknown) {
-    const message = this.parsePayload(payload);
-    if (!message) {
-      return;
-    }
-
-    await this.expireReservationService.expireReservation(message);
+  protected routingKeys(): string[] {
+    return [EventName.ReservationExpired];
   }
 
-  private parsePayload(payload: unknown): ReservationExpirationPayload | null {
+  protected async parsePayload(
+    payload: unknown,
+    _message: ConsumeMessage,
+  ): Promise<ReservationExpirationPayload | null> {
     if (!payload || typeof payload !== 'object') {
       this.logger.warn('Invalid expiration payload type.');
       return null;
@@ -80,5 +58,12 @@ export class ReservationExpirationConsumer implements OnModuleInit {
     }
 
     return { reservationId, sessionId, seatIds };
+  }
+
+  protected async handle(
+    payload: ReservationExpirationPayload,
+    _message: ConsumeMessage,
+  ): Promise<void> {
+    await this.expireReservationService.expireReservation(payload);
   }
 }

@@ -27,12 +27,11 @@ export class ExpireReservationService {
       return false;
     }
 
-    await this.reservationRepository.releaseSeatLocks(
-      payload.reservationId,
-      new Date(),
-    );
-
     await Promise.all([
+      this.reservationRepository.releaseSeatLocks(
+        payload.reservationId,
+        new Date(),
+      ),
       this.safeUpdateCache(payload),
       this.safePublishSeatReleased(payload),
     ]);

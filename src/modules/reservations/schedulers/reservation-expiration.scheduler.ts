@@ -30,19 +30,22 @@ export class ReservationExpirationScheduler {
   async schedule(reservation: Reservation, seatIds: string[]) {
     await this.ensureTopology();
 
-    const delayMs = Math.max(
-      0,
-      reservation.expiresAt.getTime() - Date.now(),
-    );
+    const delayMs = Math.max(0, reservation.expiresAt.getTime() - Date.now());
+
     const payload: ReservationExpirationPayload = {
       reservationId: reservation.id,
       sessionId: reservation.sessionId,
       seatIds,
     };
 
-    await this.queueService.publish(this.eventsExchange, this.delayRoutingKey, payload, {
-      expiration: String(delayMs),
-    });
+    await this.queueService.publish(
+      this.eventsExchange,
+      this.delayRoutingKey,
+      payload,
+      {
+        expiration: String(delayMs),
+      },
+    );
   }
 
   private async ensureTopology() {

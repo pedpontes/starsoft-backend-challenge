@@ -10,6 +10,7 @@ import { Reservation } from './entities/reservation.entity';
 import { ReservationSeat } from './entities/reservation-seat.entity';
 import { SeatLock } from './entities/seat-lock.entity';
 import { ReservationExpirationConsumer } from './consumers/reservation-expiration.consumer';
+import { ReservationCreatedConsumer } from './consumers/reservation-created.consumer';
 import { ReservationExpirationScheduler } from './schedulers/reservation-expiration.scheduler';
 import { ExpireReservationService } from './services/expire-reservation/expire-reservation.service';
 import { EventsModule } from '../../shared/events/events.module';
@@ -32,6 +33,7 @@ import { QueueModule } from '../../infra/queue/queue.module';
     LoadReservationService,
     UpdateReservationService,
     RemoveReservationService,
+    ReservationCreatedConsumer,
     ReservationExpirationConsumer,
     ReservationExpirationScheduler,
     ExpireReservationService,

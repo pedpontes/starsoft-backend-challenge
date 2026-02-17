@@ -11,81 +11,124 @@ import { EventsService } from 'src/shared/events/usecases/events.service';
 import { EventName } from 'src/shared/events/types/event-names';
 import { SeatAvailabilityCacheService } from '../../../sessions/services/seat-availability-cache/seat-availability-cache.service';
 import { SeatStatus } from '../../../sessions/types/seat-status';
-import { ReservationExpirationScheduler } from '../../schedulers/reservation-expiration.scheduler';
 import { Reservation } from '../../entities/reservation.entity';
 import { SeatAlreadyLockedError } from '../../errors/seat-already-locked.error';
 import { IdempotencyKeyConflictError } from '../../errors/idempotency-key-conflict.error';
 
 @Injectable()
 export class AddReservationService {
-  #EXPIRE_SEC = 30_000;
+  #RESERVATION_TTL_MS = 30_000;
 
   constructor(
     private readonly reservationRepository: ReservationRepository,
     private readonly sessionRepository: SessionRepository,
     private readonly eventsService: EventsService,
     private readonly seatAvailabilityCacheService: SeatAvailabilityCacheService,
-    private readonly reservationExpirationScheduler: ReservationExpirationScheduler,
   ) {}
 
   async addReservation(dto: CreateReservationDto, idempotencyKey?: string) {
-    const normalizedIdempotencyKey = idempotencyKey?.trim() || undefined;
-    const uniqueSeatIds = [...new Set(dto.seatIds)].sort();
-    if (uniqueSeatIds.length !== dto.seatIds.length)
-      throw new BadRequestException('Duplicated seats in request.');
-
-    if (normalizedIdempotencyKey) {
-      const existing = await this.reservationRepository.loadByIdempotencyKey(
-        dto.userId,
-        normalizedIdempotencyKey,
-        true,
-      );
-      if (existing) {
-        this.ensureIdempotencyMatchesRequest(
-          existing,
-          dto.sessionId,
-          uniqueSeatIds,
-        );
-        return existing;
-      }
+    const normalizedIdempotencyKey =
+      this.normalizeIdempotencyKey(idempotencyKey);
+    const seatIds = this.ensureUniqueSeatIds(dto.seatIds);
+    const existing = await this.loadExistingReservationForIdempotency(
+      dto,
+      normalizedIdempotencyKey,
+      seatIds,
+    );
+    if (existing) {
+      return existing;
     }
 
     const seats = await this.sessionRepository.loadSeatsBySessionId(
       dto.sessionId,
     );
 
-    this.ensureExistsSeats(seats, uniqueSeatIds);
-    await this.ensureSeatsAvaibility(dto.sessionId, uniqueSeatIds);
+    this.ensureSeatsExist(seats, seatIds);
+    await this.ensureSeatsAvailability(dto.sessionId, seatIds);
 
-    const expiresAt = new Date(Date.now() + this.#EXPIRE_SEC);
-    let reservation: Reservation;
+    const expiresAt = this.buildExpirationDate();
+    const reservation = await this.createReservation(
+      dto,
+      seatIds,
+      normalizedIdempotencyKey,
+      expiresAt,
+    );
+
+    const ttlSeconds = this.computeTtlSeconds(expiresAt);
+    await Promise.allSettled([
+      this.safeUpdateCachedSeats(
+        dto.sessionId,
+        seatIds,
+        SeatStatus.RESERVED,
+        ttlSeconds,
+      ),
+      this.eventsService.publish(EventName.ReservationCreated, reservation),
+    ]);
+
+    return reservation;
+  }
+
+  private normalizeIdempotencyKey(idempotencyKey?: string) {
+    const normalized = idempotencyKey?.trim();
+    return normalized ? normalized : undefined;
+  }
+
+  private ensureUniqueSeatIds(seatIds: string[]) {
+    const uniqueSeatIds = [...new Set(seatIds)].sort();
+    if (uniqueSeatIds.length !== seatIds.length)
+      throw new BadRequestException('Duplicated seats in request.');
+    return uniqueSeatIds;
+  }
+
+  private async loadExistingReservationForIdempotency(
+    dto: CreateReservationDto,
+    idempotencyKey: string | undefined,
+    seatIds: string[],
+  ) {
+    if (!idempotencyKey) return undefined;
+
+    const existing = await this.reservationRepository.loadByIdempotencyKey(
+      dto.userId,
+      idempotencyKey,
+      true,
+    );
+    if (!existing) return undefined;
+
+    this.ensureIdempotencyMatchesRequest(existing, dto.sessionId, seatIds);
+    return existing;
+  }
+
+  private buildExpirationDate() {
+    return new Date(Date.now() + this.#RESERVATION_TTL_MS);
+  }
+
+  private computeTtlSeconds(expiresAt: Date) {
+    return Math.max(1, Math.ceil((expiresAt.getTime() - Date.now()) / 1000));
+  }
+
+  private async createReservation(
+    dto: CreateReservationDto,
+    seatIds: string[],
+    idempotencyKey: string | undefined,
+    expiresAt: Date,
+  ) {
     try {
-      reservation = await this.reservationRepository.add({
+      return await this.reservationRepository.add({
         sessionId: dto.sessionId,
         userId: dto.userId,
-        seatIds: uniqueSeatIds,
+        seatIds,
         expiresAt,
-        idempotencyKey: normalizedIdempotencyKey,
+        idempotencyKey,
       });
     } catch (error) {
-      if (
-        normalizedIdempotencyKey &&
-        (error instanceof SeatAlreadyLockedError ||
-          error instanceof IdempotencyKeyConflictError)
-      ) {
-        const existing = await this.reservationRepository.loadByIdempotencyKey(
-          dto.userId,
-          normalizedIdempotencyKey,
-          true,
-        );
-        if (existing) {
-          this.ensureIdempotencyMatchesRequest(
-            existing,
-            dto.sessionId,
-            uniqueSeatIds,
-          );
-          return existing;
-        }
+      const existing = await this.tryLoadExistingOnConflict(
+        error,
+        dto,
+        seatIds,
+        idempotencyKey,
+      );
+      if (existing) {
+        return existing;
       }
       if (error instanceof SeatAlreadyLockedError) {
         throw new ConflictException('Some seats are already reserved.');
@@ -95,21 +138,31 @@ export class AddReservationService {
       }
       throw error;
     }
+  }
 
-    const ttlSeconds = Math.max(
-      1,
-      Math.ceil((expiresAt.getTime() - Date.now()) / 1000),
-    );
-    await this.safeUpdateCachedSeats(
-      dto.sessionId,
-      uniqueSeatIds,
-      SeatStatus.RESERVED,
-      ttlSeconds,
-    );
-    await this.safeScheduleExpiration(reservation, uniqueSeatIds);
-    await this.eventsService.publish(EventName.ReservationCreated, reservation);
+  private async tryLoadExistingOnConflict(
+    error: unknown,
+    dto: CreateReservationDto,
+    seatIds: string[],
+    idempotencyKey: string | undefined,
+  ) {
+    if (!idempotencyKey) return undefined;
+    if (
+      !(error instanceof SeatAlreadyLockedError) &&
+      !(error instanceof IdempotencyKeyConflictError)
+    ) {
+      return undefined;
+    }
 
-    return reservation;
+    const existing = await this.reservationRepository.loadByIdempotencyKey(
+      dto.userId,
+      idempotencyKey,
+      true,
+    );
+    if (!existing) return undefined;
+
+    this.ensureIdempotencyMatchesRequest(existing, dto.sessionId, seatIds);
+    return existing;
   }
 
   private ensureIdempotencyMatchesRequest(
@@ -135,7 +188,7 @@ export class AddReservationService {
     }
   }
 
-  private ensureExistsSeats(seats: Seat[], seatIds: string[]) {
+  private ensureSeatsExist(seats: Seat[], seatIds: string[]) {
     const seatIdSet = new Set(seats.map((seat) => seat.id));
     const missingSeatsIds = seatIds.filter((seatId) => !seatIdSet.has(seatId));
 
@@ -145,7 +198,7 @@ export class AddReservationService {
       );
   }
 
-  private async ensureSeatsAvaibility(sessionId: string, seatIds: string[]) {
+  private async ensureSeatsAvailability(sessionId: string, seatIds: string[]) {
     const [soldSeatIds, reservedSeatIds] = await Promise.all([
       this.sessionRepository.loadSoldSeatIds(sessionId, seatIds),
       this.sessionRepository.loadReservedSeatIds(sessionId, seatIds),
@@ -173,12 +226,5 @@ export class AddReservationService {
     } catch {}
   }
 
-  private async safeScheduleExpiration(
-    reservation: Reservation,
-    seatIds: string[],
-  ) {
-    try {
-      await this.reservationExpirationScheduler.schedule(reservation, seatIds);
-    } catch {}
-  }
+  // Expiration is scheduled by ReservationCreatedConsumer via events.
 }

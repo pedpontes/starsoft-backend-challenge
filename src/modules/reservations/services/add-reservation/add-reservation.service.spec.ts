@@ -7,7 +7,6 @@ import { ReservationRepository } from '../../repositories/contracts/reservation.
 import { SessionRepository } from '../../../sessions/repositories/contracts/session.repository';
 import { EventsService } from 'src/shared/events/usecases/events.service';
 import { SeatAvailabilityCacheService } from '../../../sessions/services/seat-availability-cache/seat-availability-cache.service';
-import { ReservationExpirationScheduler } from '../../schedulers/reservation-expiration.scheduler';
 import { SeatStatus } from '../../../sessions/types/seat-status';
 import { SeatAlreadyLockedError } from '../../errors/seat-already-locked.error';
 import { IdempotencyKeyConflictError } from '../../errors/idempotency-key-conflict.error';
@@ -28,7 +27,6 @@ const makeService = (overrides?: {
   sessionRepository?: Partial<SessionRepository>;
   eventsService?: Partial<EventsService>;
   seatAvailabilityCacheService?: Partial<SeatAvailabilityCacheService>;
-  reservationExpirationScheduler?: Partial<ReservationExpirationScheduler>;
 }) => {
   const reservationRepository = {
     add: jest.fn().mockResolvedValue(makeReservation()),
@@ -56,17 +54,11 @@ const makeService = (overrides?: {
     ...overrides?.seatAvailabilityCacheService,
   } as unknown as SeatAvailabilityCacheService;
 
-  const reservationExpirationScheduler = {
-    schedule: jest.fn().mockResolvedValue(undefined),
-    ...overrides?.reservationExpirationScheduler,
-  } as unknown as ReservationExpirationScheduler;
-
   const service = new AddReservationService(
     reservationRepository,
     sessionRepository,
     eventsService,
     seatAvailabilityCacheService,
-    reservationExpirationScheduler,
   );
 
   return {
@@ -75,7 +67,6 @@ const makeService = (overrides?: {
     sessionRepository,
     eventsService,
     seatAvailabilityCacheService,
-    reservationExpirationScheduler,
   };
 };
 
@@ -169,11 +160,11 @@ describe('AddReservationService', () => {
     ).rejects.toBeInstanceOf(ConflictException);
   });
 
-  it('creates reservation, updates cache, schedules expiration, and publishes event', async () => {
+  it('creates reservation, updates cache, and publishes event', async () => {
     const reservation = makeReservation({
       expiresAt: new Date('2025-01-01T00:00:30Z'),
     });
-    const { service, reservationRepository, seatAvailabilityCacheService, reservationExpirationScheduler, eventsService } =
+    const { service, reservationRepository, seatAvailabilityCacheService, eventsService } =
       makeService({
         reservationRepository: {
           add: jest.fn().mockResolvedValue(reservation),
@@ -193,10 +184,6 @@ describe('AddReservationService', () => {
       ['seat-1', 'seat-2'],
       SeatStatus.RESERVED,
       30,
-    );
-    expect(reservationExpirationScheduler.schedule).toHaveBeenCalledWith(
-      reservation,
-      ['seat-1', 'seat-2'],
     );
     expect(eventsService.publish).toHaveBeenCalledWith(
       EventName.ReservationCreated,
