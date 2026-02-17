@@ -576,6 +576,40 @@ describe('Backend Challenge Requirements (e2e)', () => {
       expect(statuses.filter((status) => status === 201)).toHaveLength(1);
       expect(statuses.filter((status) => status === 409)).toHaveLength(9);
     });
+
+    it('handles 10 concurrent users competing for two seats (story scenario)', async () => {
+      const users = await Promise.all(
+        Array.from({ length: 10 }, (_, i) => createUser(`Story User ${i + 1}`)),
+      );
+      const { sessionId, seats } = await createSession();
+      const seatA = seats[0].id;
+      const seatB = seats[1].id;
+
+      const results = await Promise.allSettled(
+        users.map((user, index) =>
+          createReservation({
+            sessionId,
+            userId: user.id,
+            seatIds: [index % 2 === 0 ? seatA : seatB],
+            idempotencyKey: `story-10-${index}`,
+          }),
+        ),
+      );
+
+      const statuses = results.map((result) =>
+        result.status === 'fulfilled' ? result.value.status : 0,
+      );
+
+      expect(statuses.filter((status) => status === 201)).toHaveLength(2);
+      expect(statuses.filter((status) => status === 409)).toHaveLength(8);
+
+      const availability = await loadAvailability(sessionId);
+      const seatStatus = new Map(
+        availability.seats.map((seat) => [seat.id, seat.status]),
+      );
+      expect(seatStatus.get(seatA)).toBe(SeatStatus.RESERVED);
+      expect(seatStatus.get(seatB)).toBe(SeatStatus.RESERVED);
+    });
   });
 
   describe('Payments and Sales', () => {
