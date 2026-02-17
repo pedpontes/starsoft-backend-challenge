@@ -610,6 +610,47 @@ describe('Backend Challenge Requirements (e2e)', () => {
       expect(seatStatus.get(seatA)).toBe(SeatStatus.RESERVED);
       expect(seatStatus.get(seatB)).toBe(SeatStatus.RESERVED);
     });
+
+    it('handles 100 concurrent users competing for 20 seat pairs', async () => {
+      const totalUsers = 100;
+      const users = await Promise.all(
+        Array.from({ length: totalUsers }, (_, i) =>
+          createUser(`Stress User ${i + 1}`),
+        ),
+      );
+      const { sessionId, seats } = await createSession({ seatsCount: 40 });
+
+      const seatPairs = Array.from({ length: 20 }, (_, index) => [
+        seats[index * 2].id,
+        seats[index * 2 + 1].id,
+      ]);
+
+      const results = await Promise.allSettled(
+        users.map((user, index) =>
+          createReservation({
+            sessionId,
+            userId: user.id,
+            seatIds: seatPairs[index % seatPairs.length],
+            idempotencyKey: `stress-50-${index}`,
+          }),
+        ),
+      );
+
+      const statuses = results.map((result) =>
+        result.status === 'fulfilled' ? result.value.status : 0,
+      );
+
+      expect(statuses.filter((status) => status === 201)).toHaveLength(20);
+      expect(statuses.filter((status) => status === 409)).toHaveLength(80);
+
+      const availability = await loadAvailability(sessionId);
+      const reservedSeats = availability.seats.filter(
+        (seat) => seat.status === SeatStatus.RESERVED,
+      );
+
+      expect(reservedSeats).toHaveLength(40);
+      expect(new Set(reservedSeats.map((seat) => seat.id)).size).toBe(40);
+    });
   });
 
   describe('Payments and Sales', () => {
