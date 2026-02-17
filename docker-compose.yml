@@ -15,10 +15,6 @@ services:
         condition: service_started
       broker:
         condition: service_started
-    volumes:
-      - ./:/usr/src/app
-      - /usr/src/app/node_modules
-    command: npm run start:dev
 
   db:
     image: postgres:15
