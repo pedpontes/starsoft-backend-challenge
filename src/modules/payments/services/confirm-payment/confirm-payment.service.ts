@@ -33,13 +33,15 @@ export class ConfirmPaymentService {
       this.confirmPaymentTransaction(repo, dto.reservationId),
     );
 
-    await this.safeUpdateCachedSeats(
-      result.sale.sessionId,
-      result.seatIds,
-      SeatStatus.SOLD,
-      this.#CACHE_TTL_S,
-    );
-    await this.publishPaymentConfirmedIfNeeded(result);
+    await Promise.allSettled([
+      this.safeUpdateCachedSeats(
+        result.sale.sessionId,
+        result.seatIds,
+        SeatStatus.SOLD,
+        this.#CACHE_TTL_S,
+      ),
+      this.publishPaymentConfirmedIfNeeded(result),
+    ]);
 
     return result.sale;
   }
