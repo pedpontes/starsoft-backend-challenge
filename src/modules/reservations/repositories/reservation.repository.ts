@@ -214,8 +214,6 @@ export class ReservationTypeOrmRepository extends ReservationRepository {
         .createQueryBuilder('reservation')
         .update(Reservation)
         .set({ status: ReservationStatus.EXPIRED })
-        // UpdateQueryBuilder doesn't define the alias in the UPDATE statement,
-        // so referencing "reservation." causes a missing FROM-clause error.
         .where('id = :id', { id })
         .andWhere('status = :status', {
           status: ReservationStatus.RESERVED,
@@ -241,8 +239,6 @@ export class ReservationTypeOrmRepository extends ReservationRepository {
         .createQueryBuilder('seatLock')
         .update(SeatLock)
         .set({ releasedAt })
-        // UpdateQueryBuilder doesn't define the alias in the UPDATE statement,
-        // so referencing "seatLock." causes a missing FROM-clause error.
         .where('reservationId = :reservationId', { reservationId })
         .andWhere('releasedAt IS NULL')
         .execute();
